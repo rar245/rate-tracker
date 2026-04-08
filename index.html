@@ -4,81 +4,69 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bank Rate Tracker</title>
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
-    <script src="https://unpkg.com/recharts/umd/Recharts.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: sans-serif; background: #f4f4f9; padding: 20px; }
-        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 800px; margin: auto; }
-        input { padding: 10px; width: 100px; font-size: 1.1rem; border: 1px solid #ccc; border-radius: 5px; }
-        .lost-money { color: #d9534f; font-size: 2rem; font-weight: bold; margin: 10px 0; }
+        body { font-family: -apple-system, sans-serif; background: #f0f2f5; padding: 20px; color: #333; }
+        .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 800px; margin: auto; }
+        .calc-box { background: #1a1a1a; color: white; padding: 25px; border-radius: 12px; margin-top: 30px; text-align: center; }
+        input { padding: 10px; width: 120px; font-size: 1.2rem; border-radius: 6px; border: 1px solid #444; background: #333; color: white; margin: 10px; }
+        .lost-money { color: #ff4d4d; font-size: 2.2rem; font-weight: bold; }
+        canvas { max-height: 400px; margin-top: 20px; }
     </style>
 </head>
 <body>
-    <div id="root"></div>
+    <div class="card">
+        <h1>Bank Rate Tracker 🏦</h1>
+        <p>Comparing Chase (0.01%) vs High-Yield Savings (2018–2026)</p>
+        
+        <canvas id="rateChart"></canvas>
 
-<script type="text/babel">
-    // This ensures we wait for the global Recharts variable to exist
-    const { 
-        LineChart, 
-        Line, 
-        XAxis, 
-        YAxis, 
-        Tooltip, 
-        ResponsiveContainer, 
-        CartesianGrid 
-    } = window.Recharts; // Adding 'window.' is the key fix here
+        <div class="calc-box">
+            <h3>"Loyalty Tax" Calculator</h3>
+            <p>If you have $<input type="number" id="balance" value="10000" oninput="updateCalc()"> in Chase...</p>
+            <div class="lost-money" id="result">-$324.00</div>
+            <p>lost in interest every year.</p>
+        </div>
+    </div>
 
-    const { useState, useEffect } = React;
+    <script>
+        let chartData = [];
 
-    function App() {
-            const [data, setData] = useState([]);
-            const [balance, setBalance] = useState(10000);
+        // 1. Get the data
+        fetch('data/rates.json')
+            .then(res => res.json())
+            .then(data => {
+                chartData = data;
+                renderChart(data);
+                updateCalc();
+            })
+            .catch(err => alert("Error loading data: Ensure data/rates.json exists."));
 
-            // Fetch the data from your GitHub JSON file
-            useEffect(() => {
-                fetch('data/rates.json')
-                    .then(res => res.json())
-                    .then(json => setData(json));
-            }, []);
-
-            if (data.length === 0) return <div>Loading Rates...</div>;
-
-            const latest = data[data.length - 1];
-            const lostInterest = ((balance * (latest.Marcus - latest.Chase)) / 100).toFixed(2);
-
-            return (
-                <div className="card">
-                    <h1>Bank Rate Tracker 🏦</h1>
-                    <p>Comparing Chase (0.01%) vs High-Yield Online Banks</p>
-                    
-                    <div style={{ width: '100%', height: 300 }}>
-                        <ResponsiveContainer>
-                            <LineChart data={data}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="date" />
-                                <YAxis unit="%" />
-                                <Tooltip />
-                                <Line type="step" dataKey="Chase" stroke="#117aca" strokeWidth={3} dot={{r: 6}} />
-                                <Line type="monotone" dataKey="Marcus" stroke="#00833e" strokeWidth={3} />
-                                <Line type="monotone" dataKey="Ally" stroke="#5a2d81" strokeWidth={3} />
-                            </LineChart>
-                        </ResponsiveContainer>
-                    </div>
-
-                    <div style={{ marginTop: '30px', borderTop: '1px solid #eee', paddingTop: '20px' }}>
-                        <h3>The "Loyalty Tax" Calculator</h3>
-                        <p>If you have <strong>$<input type="number" value={balance} onChange={e => setBalance(e.target.value)} /></strong> in Chase...</p>
-                        <div className="lost-money">-${lostInterest} / year</div>
-                        <p>That is how much interest you're losing every year by not switching.</p>
-                    </div>
-                </div>
-            );
+        // 2. Build the Chart
+        function renderChart(data) {
+            const ctx = document.getElementById('rateChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.map(d => d.date),
+                    datasets: [
+                        { label: 'Marcus (HYSA)', data: data.map(d => d.Marcus), borderColor: '#00833e', tension: 0.1 },
+                        { label: 'Ally (HYSA)', data: data.map(d => d.Ally), borderColor: '#5a2d81', tension: 0.1 },
+                        { label: 'Chase', data: data.map(d => d.Chase), borderColor: '#117aca', borderWidth: 4, stepped: true }
+                    ]
+                },
+                options: { responsive: true, scales: { y: { beginAtZero: true, ticks: { callback: v => v + '%' } } } }
+            });
         }
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+        // 3. Calculator Logic
+        function updateCalc() {
+            if (chartData.length === 0) return;
+            const balance = document.getElementById('balance').value;
+            const latest = chartData[chartData.length - 1];
+            const lost = (balance * (latest.Marcus - latest.Chase) / 100).toFixed(2);
+            document.getElementById('result').innerText = `-$${Number(lost).toLocaleString()}`;
+        }
     </script>
 </body>
 </html>
