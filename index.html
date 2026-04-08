@@ -16,6 +16,14 @@
 </head>
 <body>
     <div class="card">
+        <p id="last-updated" style="font-size: 0.8rem; color: #666;"></p>
+
+        <script>
+            // Inside your existing fetch().then() block:
+            const latestDate = data[data.length - 1].date;
+            document.getElementById('last-updated').innerText = `Rates accurate as of: ${latestDate}`;
+        </script>
+        
         <h1>Bank Rate Tracker 🏦</h1>
         <p>Comparing Chase (0.01%) vs High-Yield Savings (2018–2026)</p>
         
