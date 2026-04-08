@@ -25,7 +25,14 @@ jobs:
         run: pip install requests beautifulsoup4
         
       - name: Run Scraper
-        run: python scripts/scraper.py
+        # This command finds the file wherever it is and runs it
+        run: |
+          SCRIPT_PATH=$(find . -name "scraper.py" | head -n 1)
+          if [ -z "$SCRIPT_PATH" ]; then
+            echo "Error: scraper.py not found in the repository!"
+            exit 1
+          fi
+          python "$SCRIPT_PATH"
         
       - name: Commit and Push
         run: |
