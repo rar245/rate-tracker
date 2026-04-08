@@ -28,7 +28,7 @@
 
             // Fetch the data from your GitHub JSON file
             useEffect(() => {
-                fetch('./data/rates.json')
+                fetch('data/rates.json')
                     .then(res => res.json())
                     .then(json => setData(json));
             }, []);
