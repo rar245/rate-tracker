@@ -1,7 +1,7 @@
 name: Daily Rate Scraper
 on:
   schedule:
-    - cron: '0 8 * * *' # Runs daily at 8 AM UTC (4 AM EST)
+    - cron: '*/5 * * * *' # Runs daily at 8 AM UTC (4 AM EST)
   workflow_dispatch: # Allows you to run it manually for testing
 
 jobs:
