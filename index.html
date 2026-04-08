@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bank Rate Tracker</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+    <script src="https://unpkg.com/recharts/umd/Recharts.js"></script>
+    <style>
+        body { font-family: sans-serif; background: #f4f4f9; padding: 20px; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 800px; margin: auto; }
+        input { padding: 10px; width: 100px; font-size: 1.1rem; border: 1px solid #ccc; border-radius: 5px; }
+        .lost-money { color: #d9534f; font-size: 2rem; font-weight: bold; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } = Recharts;
+        const { useState, useEffect } = React;
+
+        function App() {
+            const [data, setData] = useState([]);
+            const [balance, setBalance] = useState(10000);
+
+            // Fetch the data from your GitHub JSON file
+            useEffect(() => {
+                fetch('./data/rates.json')
+                    .then(res => res.json())
+                    .then(json => setData(json));
+            }, []);
+
+            if (data.length === 0) return <div>Loading Rates...</div>;
+
+            const latest = data[data.length - 1];
+            const lostInterest = ((balance * (latest.Marcus - latest.Chase)) / 100).toFixed(2);
+
+            return (
+                <div className="card">
+                    <h1>Bank Rate Tracker 🏦</h1>
+                    <p>Comparing Chase (0.01%) vs High-Yield Online Banks</p>
+                    
+                    <div style={{ width: '100%', height: 300 }}>
+                        <ResponsiveContainer>
+                            <LineChart data={data}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="date" />
+                                <YAxis unit="%" />
+                                <Tooltip />
+                                <Line type="step" dataKey="Chase" stroke="#117aca" strokeWidth={3} dot={{r: 6}} />
+                                <Line type="monotone" dataKey="Marcus" stroke="#00833e" strokeWidth={3} />
+                                <Line type="monotone" dataKey="Ally" stroke="#5a2d81" strokeWidth={3} />
+                            </LineChart>
+                        </ResponsiveContainer>
+                    </div>
+
+                    <div style={{ marginTop: '30px', borderTop: '1px solid #eee', paddingTop: '20px' }}>
+                        <h3>The "Loyalty Tax" Calculator</h3>
+                        <p>If you have <strong>$<input type="number" value={balance} onChange={e => setBalance(e.target.value)} /></strong> in Chase...</p>
+                        <div className="lost-money">-${lostInterest} / year</div>
+                        <p>That is how much interest you're losing every year by not switching.</p>
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
