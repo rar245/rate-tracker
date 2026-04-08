@@ -1,22 +1,32 @@
 name: Production Rate Update
 on:
   schedule:
-    - cron: '0 5 * * *' # 1:00 AM EST every day
+    - cron: '0 5 * * *'
   workflow_dispatch:
+
+# Opt into Node 24 now to clear the warning
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   scrape:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      # Updated to v5+ to support Node 24
+      - uses: actions/checkout@v5 
+      
+      # Updated to v6+ to support Node 24
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v6
         with:
-          python-version: '3.9'
+          python-version: '3.11' # Using a more current Python version for 2026
+          
       - name: Install Dependencies
         run: pip install requests beautifulsoup4
+        
       - name: Run Scraper
         run: python scripts/scraper.py
+        
       - name: Commit and Push
         run: |
           git config --global user.name "BankRate-Bot"
