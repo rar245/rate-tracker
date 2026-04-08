@@ -18,11 +18,21 @@
 <body>
     <div id="root"></div>
 
-    <script type="text/babel">
-        const { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } = Recharts;
-        const { useState, useEffect } = React;
+<script type="text/babel">
+    // This ensures we wait for the global Recharts variable to exist
+    const { 
+        LineChart, 
+        Line, 
+        XAxis, 
+        YAxis, 
+        Tooltip, 
+        ResponsiveContainer, 
+        CartesianGrid 
+    } = window.Recharts; // Adding 'window.' is the key fix here
 
-        function App() {
+    const { useState, useEffect } = React;
+
+    function App() {
             const [data, setData] = useState([]);
             const [balance, setBalance] = useState(10000);
 
