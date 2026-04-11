@@ -37,7 +37,7 @@ jobs:
       - name: Commit and Push
         run: |
           git config --global user.name "BankRate-Bot"
-          git config --global user.email "bot@bankrate.com"
+          git config --global user.email "55024116+rar245@users.noreply.github.com"
           git add data/rates.json
           git commit -m "Live Update: $(date +'%Y-%m-%d')" || exit 0
           git push
