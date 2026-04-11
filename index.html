@@ -64,6 +64,22 @@
                     ]
                 },
                 options: { responsive: true, scales: { y: { beginAtZero: true, ticks: { callback: v => v + '%' } } } }
+                options: {
+    plugins: {
+        legend: {
+            display: true,
+            onClick: function(e, legendItem, legend) {
+                const index = legendItem.datasetIndex;
+                const ci = legend.chart;
+                if (ci.isDatasetVisible(index)) {
+                    ci.hide(index);
+                } else {
+                    ci.show(index);
+                }
+            }
+        }
+    }
+}
             });
         }
 
