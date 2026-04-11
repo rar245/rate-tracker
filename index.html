@@ -1,110 +1,219 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8"> 
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bank Savings Rate Tracker</title>
+    <title>The Loyalty Tax | Savings Rate Tracker</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: -apple-system, sans-serif; background: #f0f2f5; padding: 20px; color: #333; }
-        .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 800px; margin: auto; }
-        .calc-box { background: #1a1a1a; color: white; padding: 25px; border-radius: 12px; margin-top: 30px; text-align: center; }
-        input { padding: 10px; width: 120px; font-size: 1.2rem; border-radius: 6px; border: 1px solid #444; background: #333; color: white; margin: 10px; }
-        .lost-money { color: #ff4d4d; font-size: 2.2rem; font-weight: bold; }
-        canvas { max-height: 400px; margin-top: 20px; }
+        :root {
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+            --text-main: #333;
+            --chase-blue: #117aca;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            max-width: 1000px;
+            width: 1000%;
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        h1 { margin: 0; color: #2c3e50; }
+        p.subtitle { color: #666; margin-top: 5px; }
+        
+        #chart-wrapper {
+            position: relative;
+            height: 450px;
+            width: 100%;
+            margin-bottom: 30px;
+        }
+        
+        .calculator {
+            background: #e9ecef;
+            padding: 20px;
+            border-radius: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            align-items: center;
+            justify-content: center;
+        }
+        .calc-input {
+            display: flex;
+            flex-direction: column;
+        }
+        input {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 1.1rem;
+        }
+        .result-box {
+            font-weight: bold;
+            font-size: 1.4rem;
+            color: #d9534f;
+        }
+        #error-msg {
+            color: #d9534f;
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        footer {
+            margin-top: 30px;
+            font-size: 0.85rem;
+            color: #888;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
-    <div class="card">
-        <p id="last-updated" style="font-size: 0.8rem; color: #666;"></p>
 
-        <script>
-            // Inside your existing fetch().then() block:
-            const latestDate = data[data.length - 1].date;
-            document.getElementById('last-updated').innerText = `Rates accurate as of: ${latestDate}`;
-        </script>
-        
-        <h1>Bank Savings Rate Tracker 🏦</h1>
-        <p>Comparing Chase (0.01%) vs High-Yield Savings (2018–2026)</p>
-        
+<div class="container">
+    <header>
+        <h1>The Loyalty Tax</h1>
+        <p class="subtitle">Visualizing what big banks cost you compared to the historical Top 10.</p>
+    </header>
+
+    <div id="error-msg"></div>
+
+    <div id="chart-wrapper">
         <canvas id="rateChart"></canvas>
-
-        <div class="calc-box">
-            <h3>"Loyalty Tax" Calculator</h3>
-            <p>If you have $<input type="number" id="balance" value="10000" oninput="updateCalc()"> in Chase...</p>
-            <div class="lost-money" id="result">-$324.00</div>
-            <p>lost in interest every year.</p>
-        </div>
     </div>
 
-    <script>
-        let chartInstance = null;
-        let ratesData = [];
-    
-        // 1. Fetch the data
-        fetch('data/rates.json')
-            .then(res => res.json())
-            .then(data => {
-                ratesData = data;
-                renderChart(data);
-                updateCalc();
-            })
-            .catch(err => console.error("Error loading JSON:", err));
-    
-        function renderChart(data) {
-            const ctx = document.getElementById('rateChart').getContext('2d');
-            
-            // Define colors for your 10 banks
-            const colors = {
-                "Chase": "#117aca", "BofA": "#dc3545", "Wells Fargo": "#d71e28",
-                "Ally": "#5a2d81", "Marcus": "#00833e", "Discover": "#ff6000",
-                "Amex": "#0070d1", "Capital One": "#00355f", "SoFi": "#00b2ff",
-                "Wealthfront": "#8338ec"
-            };
-    
-            // Get all bank names except the "date" key
-            const bankNames = Object.keys(data[0]).filter(key => key !== 'date');
-    
-            // Create a dataset for every bank found in the JSON
-            const datasets = bankNames.map(name => ({
-                label: name,
-                data: data.map(d => d[name]),
-                borderColor: colors[name] || "#999", // Fallback to gray if color missing
-                borderWidth: name.includes("Chase") || name.includes("BofA") ? 4 : 2,
-                stepped: name.includes("Chase") || name.includes("BofA") ? true : false,
-                hidden: ["Amex", "Capital One", "SoFi", "Discover", "BofA", "Wells Fargo"].includes(name) // Hide some by default to keep it clean
-            }));
-    
-            chartInstance = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: data.map(d => d.date),
-                    datasets: datasets
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'top' }
+    <div class="calculator">
+        <div class="calc-input">
+            <label>Savings Amount ($)</label>
+            <input type="number" id="balance" value="50000" oninput="updateCalc()">
+        </div>
+        <div class="calc-text">
+            Your estimated annual <strong>"Loyalty Tax"</strong> to Chase:
+        </div>
+        <div class="result-box" id="result">Calculating...</div>
+    </div>
+
+    <footer>
+        <p>Data updated daily via GitHub Actions. Rates verified for April 2026.</p>
+    </footer>
+</div>
+
+<script>
+    let chartInstance = null;
+    let ratesData = [];
+
+    const colors = {
+        "Chase": "#117aca", "BofA": "#dc3545", "Wells Fargo": "#d71e28",
+        "Ally": "#5a2d81", "Marcus": "#00833e", "Discover": "#ff6000",
+        "Amex": "#0070d1", "Capital One": "#00355f", "SoFi": "#00b2ff",
+        "Wealthfront": "#8338ec"
+    };
+
+    // 1. Load Data
+    fetch('data/rates.json')
+        .then(res => {
+            if (!res.ok) throw new Error("Could not load data/rates.json. Ensure the file exists.");
+            return res.json();
+        })
+        .then(data => {
+            ratesData = data;
+            renderChart(data);
+            updateCalc();
+        })
+        .catch(err => {
+            document.getElementById('error-msg').innerText = "System Error: " + err.message;
+            console.error(err);
+        });
+
+    function renderChart(data) {
+        const ctx = document.getElementById('rateChart').getContext('2d');
+        
+        // Extract bank names from the first entry
+        const bankNames = Object.keys(data[0]).filter(key => key !== 'date');
+
+        const datasets = bankNames.map(name => ({
+            label: name,
+            data: data.map(d => d[name]),
+            borderColor: colors[name] || "#999",
+            backgroundColor: colors[name] || "#999",
+            borderWidth: name === "Chase" ? 5 : 2,
+            pointRadius: 4,
+            tension: 0.2, // Smooth lines
+            // Hide everything except the Big Three and the Top 2 by default
+            hidden: !["Chase", "Marcus", "Ally", "Wealthfront"].includes(name)
+        }));
+
+        chartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.map(d => d.date),
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { padding: 20 }
                     },
-                    scales: {
-                        y: { 
-                            beginAtZero: true, 
-                            ticks: { callback: v => v + '%' } 
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            label: (ctx) => `${ctx.dataset.label}: ${ctx.raw}%`
                         }
                     }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { callback: v => v + '%' },
+                        title: { display: true, text: 'Annual Percentage Yield (APY)' }
+                    },
+                    x: {
+                        title: { display: true, text: 'Timeline' }
+                    }
                 }
-            });
-        }
-    
-        function updateCalc() {
-            const balance = document.getElementById('balance').value;
-            const latest = ratesData[ratesData.length - 1];
-            // Compare Chase vs the highest rate found today
-            const maxRate = Math.max(...Object.values(latest).filter(v => typeof v === 'number' && v < 10));
-            const lost = (balance * (maxRate - latest.Chase) / 100).toFixed(2);
-            document.getElementById('result').innerText = `-$${Number(lost).toLocaleString()}`;
-        }
-    </script>
+            }
+        });
+    }
+
+    function updateCalc() {
+        if (!ratesData.length) return;
+        
+        const balance = document.getElementById('balance').value;
+        const latest = ratesData[ratesData.length - 1];
+        
+        // Find the absolute highest rate currently in our Top 10
+        const ratesOnly = Object.keys(latest)
+            .filter(k => k !== 'date')
+            .map(k => latest[k]);
+        
+        const maxRate = Math.max(...ratesOnly);
+        const chaseRate = latest.Chase || 0.01;
+
+        // Formula: Balance * (Highest - Chase)
+        const lost = (balance * (maxRate - chaseRate) / 100).toFixed(2);
+        
+        document.getElementById('result').innerText = `-$${Number(lost).toLocaleString()}`;
+    }
+</script>
+
 </body>
 </html>
