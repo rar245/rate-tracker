@@ -38,57 +38,71 @@
     </div>
 
     <script>
-        let chartData = [];
-
-        // 1. Get the data
+        let chartInstance = null;
+        let ratesData = [];
+    
+        // 1. Fetch the data
         fetch('data/rates.json')
             .then(res => res.json())
             .then(data => {
-                chartData = data;
+                ratesData = data;
                 renderChart(data);
                 updateCalc();
             })
-            .catch(err => alert("Error loading data: Ensure data/rates.json exists."));
-
-        // 2. Build the Chart
+            .catch(err => console.error("Error loading JSON:", err));
+    
         function renderChart(data) {
             const ctx = document.getElementById('rateChart').getContext('2d');
-            new Chart(ctx, {
+            
+            // Define colors for your 10 banks
+            const colors = {
+                "Chase": "#117aca", "BofA": "#dc3545", "Wells Fargo": "#d71e28",
+                "Ally": "#5a2d81", "Marcus": "#00833e", "Discover": "#ff6000",
+                "Amex": "#0070d1", "Capital One": "#00355f", "SoFi": "#00b2ff",
+                "Wealthfront": "#8338ec"
+            };
+    
+            // Get all bank names except the "date" key
+            const bankNames = Object.keys(data[0]).filter(key => key !== 'date');
+    
+            // Create a dataset for every bank found in the JSON
+            const datasets = bankNames.map(name => ({
+                label: name,
+                data: data.map(d => d[name]),
+                borderColor: colors[name] || "#999", // Fallback to gray if color missing
+                borderWidth: name.includes("Chase") || name.includes("BofA") ? 4 : 2,
+                stepped: name.includes("Chase") || name.includes("BofA") ? true : false,
+                hidden: ["Amex", "Capital One", "SoFi", "Discover", "BofA", "Wells Fargo"].includes(name) // Hide some by default to keep it clean
+            }));
+    
+            chartInstance = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: data.map(d => d.date),
-                    datasets: [
-                        { label: 'Marcus (HYSA)', data: data.map(d => d.Marcus), borderColor: '#00833e', tension: 0.1 },
-                        { label: 'Ally (HYSA)', data: data.map(d => d.Ally), borderColor: '#5a2d81', tension: 0.1 },
-                        { label: 'Chase', data: data.map(d => d.Chase), borderColor: '#117aca', borderWidth: 4, stepped: true }
-                    ]
+                    datasets: datasets
                 },
-                options: { responsive: true, scales: { y: { beginAtZero: true, ticks: { callback: v => v + '%' } } } }
                 options: {
-    plugins: {
-        legend: {
-            display: true,
-            onClick: function(e, legendItem, legend) {
-                const index = legendItem.datasetIndex;
-                const ci = legend.chart;
-                if (ci.isDatasetVisible(index)) {
-                    ci.hide(index);
-                } else {
-                    ci.show(index);
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top' }
+                    },
+                    scales: {
+                        y: { 
+                            beginAtZero: true, 
+                            ticks: { callback: v => v + '%' } 
+                        }
+                    }
                 }
-            }
-        }
-    }
-}
             });
         }
-
-        // 3. Calculator Logic
+    
         function updateCalc() {
-            if (chartData.length === 0) return;
             const balance = document.getElementById('balance').value;
-            const latest = chartData[chartData.length - 1];
-            const lost = (balance * (latest.Marcus - latest.Chase) / 100).toFixed(2);
+            const latest = ratesData[ratesData.length - 1];
+            // Compare Chase vs the highest rate found today
+            const maxRate = Math.max(...Object.values(latest).filter(v => typeof v === 'number' && v < 10));
+            const lost = (balance * (maxRate - latest.Chase) / 100).toFixed(2);
             document.getElementById('result').innerText = `-$${Number(lost).toLocaleString()}`;
         }
     </script>
