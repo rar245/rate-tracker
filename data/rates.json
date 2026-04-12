@@ -1,41 +1,54 @@
 [
-  {
-    "date": "2018-06-01",
-    "Chase": 0.01,
-    "BofA": 0.01,
-    "Wells Fargo": 0.01,
-    "Ally": 1.60,
-    "Marcus": 1.70,
-    "Discover": 1.60,
-    "Amex": 1.65,
-    "Capital One": 1.60,
-    "SoFi": 1.00,
-    "Wealthfront": 1.75
-  },
-  {
-    "date": "2024-04-01",
-    "Chase": 0.01,
-    "BofA": 0.01,
-    "Wells Fargo": 0.01,
-    "Ally": 4.25,
-    "Marcus": 4.50,
-    "Discover": 4.25,
-    "Amex": 4.30,
-    "Capital One": 4.25,
-    "SoFi": 4.60,
-    "Wealthfront": 5.00
-  },
-  {
-    "date": "2026-04-11",
-    "Chase": 0.01,
-    "BofA": 0.01,
-    "Wells Fargo": 0.01,
-    "Ally": 3.30,
-    "Marcus": 3.65,
-    "Discover": 3.30,
-    "Amex": 3.20,
-    "Capital One": 3.20,
-    "SoFi": 3.30,
-    "Wealthfront": 4.00
-  }
+    {
+        "date": "2018-06-01",
+        "Chase": 0.01,
+        "BofA": 0.01,
+        "Wells Fargo": 0.01,
+        "Ally": 1.6,
+        "Marcus": 1.7,
+        "Discover": 1.6,
+        "Amex": 1.65,
+        "Capital One": 1.6,
+        "SoFi": 1.0,
+        "Wealthfront": 1.75
+    },
+    {
+        "date": "2024-04-01",
+        "Chase": 0.01,
+        "BofA": 0.01,
+        "Wells Fargo": 0.01,
+        "Ally": 4.25,
+        "Marcus": 4.5,
+        "Discover": 4.25,
+        "Amex": 4.3,
+        "Capital One": 4.25,
+        "SoFi": 4.6,
+        "Wealthfront": 5.0
+    },
+    {
+        "date": "2026-04-11",
+        "Chase": 0.01,
+        "BofA": 0.01,
+        "Wells Fargo": 0.01,
+        "Ally": 3.3,
+        "Marcus": 3.65,
+        "Discover": 3.3,
+        "Amex": 3.2,
+        "Capital One": 3.2,
+        "SoFi": 3.3,
+        "Wealthfront": 4.0
+    },
+    {
+        "date": "2026-04-12",
+        "Chase": 0.01,
+        "BofA": 0.01,
+        "Wells Fargo": 0.01,
+        "Ally": 3.3,
+        "Marcus": 3.3,
+        "Discover": 3.3,
+        "Capital One": 3.33,
+        "Amex": 0.99,
+        "SoFi": 3.3,
+        "Wealthfront": 3.3
+    }
 ]
