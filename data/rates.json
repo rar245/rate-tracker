@@ -167,5 +167,18 @@
         "Amex": 0.99,
         "SoFi": 3.3,
         "Wealthfront": 3.3
+    },
+    {
+        "date": "2026-04-22",
+        "Chase": 0.01,
+        "BofA": 0.01,
+        "Wells Fargo": 0.01,
+        "Ally": 3.3,
+        "Marcus": 3.3,
+        "Discover": 3.3,
+        "Capital One": 3.33,
+        "Amex": 0.99,
+        "SoFi": 3.3,
+        "Wealthfront": 3.3
     }
 ]
