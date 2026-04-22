@@ -173,12 +173,20 @@
         "Chase": 0.01,
         "BofA": 0.01,
         "Wells Fargo": 0.01,
-        "Ally": 3.3,
-        "Marcus": 3.3,
-        "Discover": 3.3,
+        "National Avg": 0.39,
+        "Marcus": null,
+        "Discover": null,
         "Capital One": 3.33,
         "Amex": 0.99,
-        "SoFi": 3.3,
-        "Wealthfront": 3.3
+        "Ally": null,
+        "SoFi": null,
+        "Wealthfront": null,
+        "Axos Bank": 4.21,
+        "LendingClub": null,
+        "CIT Bank": 3.65,
+        "EverBank": null,
+        "Newtek": null,
+        "BrioDirect": null,
+        "Bread Savings": null
     }
 ]
