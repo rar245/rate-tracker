@@ -2,12 +2,13 @@ import json, os, re
 from datetime import datetime
 from playwright.sync_api import sync_playwright
 
-# The "Rate Beat" April 2026 Targeted List
+# ALL BANKS RESTORED WITH CORRECTED URLS
 TARGETS = {
     "Marcus": "https://www.marcus.com/us/en/savings/high-yield-savings",
-    "Discover": "https://www.discover.com/online-savings-accounts/",
+    "Discover": "https://www.discover.com/online-banking/savings-account/",
     "Capital One": "https://www.capitalone.com/bank/savings-accounts/online-performance-savings-account/",
     "Amex": "https://www.americanexpress.com/en-us/banking/online-savings/high-yield-savings/",
+    "Barclays": "https://www.banking.barclaysus.com/online-savings.html",
     "Ally": "https://www.ally.com/bank/view-rates/",
     "SoFi": "https://www.sofi.com/banking/savings-account-interest-rates-apy/",
     "Wealthfront": "https://www.wealthfront.com/cash-account",
@@ -22,24 +23,24 @@ TARGETS = {
 
 def get_live_rate(page, url, name):
     try:
-        # Increase timeout slightly to ensure page loads completely
-        page.goto(url, wait_until="networkidle", timeout=30000)
-        page.wait_for_timeout(3000) 
+        page.goto(url, wait_until="networkidle", timeout=35000)
+        page.wait_for_timeout(4000) 
         content = page.content()
         
-        # Looking for numbers like 3.50, 4.21, etc. followed by %
-        match = re.search(r'([0-5]\.\d{2})%', content)
+        # Look for the highest rate (ignores fine print like 0.01% or 1.00% minimums)
+        matches = re.findall(r'([1-5]\.\d{2})%', content)
         
-        if match:
-            rate = float(match.group(1))
+        if matches:
+            rates = [float(m) for m in matches]
+            rate = max(rates)
             print(f"✓ {name}: {rate}%")
             return rate
         else:
-            print(f"? {name}: Rate not found on page. Recording as null.")
-            return None # NO FALLBACK
+            print(f"? {name}: No high-yield rate found.")
+            return None
     except Exception as e:
-        print(f"! {name}: Connection error. Recording as null.")
-        return None # NO FALLBACK
+        print(f"! {name}: Connection error.")
+        return None
 
 def main():
     base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -51,7 +52,6 @@ def main():
 
         today = datetime.now().strftime("%Y-%m-%d")
         
-        # Fixed Anchors (These rarely change, so we keep them as baseline)
         entry = {
             "date": today,
             "Chase": 0.01,
@@ -60,7 +60,7 @@ def main():
             "National Avg": 0.39 
         }
 
-        print(f"--- Running Strict Update for {today} ---")
+        print(f"--- Running Update for {today} ---")
         for name, url in TARGETS.items():
             entry[name] = get_live_rate(page, url, name)
 
@@ -70,7 +70,6 @@ def main():
         with open(data_path, 'r') as f: history = json.load(f)
     else: history = []
 
-    # Update or Append
     if history and history[-1]['date'] == today:
         history[-1] = entry
     else:
