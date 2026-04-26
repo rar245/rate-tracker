@@ -3,128 +3,363 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rate Tracker | Interactive Dashboard</title>
+    <title>Rate Tracker | Analytics Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        :root { --bg: #f1f5f9; --card: #ffffff; --primary: #2563eb; --text: #0f172a; --border: #e2e8f0; }
-        body { font-family: 'Inter', sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 20px; }
-        .dashboard-container { max-width: 1400px; margin: 0 auto; }
-        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
-        .chart-card { background: var(--card); padding: 24px; border-radius: 16px; border: 1px solid var(--border); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
-        .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        #resetBtn { display: none; padding: 8px 16px; background: var(--primary); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12px; }
-        #mainChart { width: 100%; height: 600px; }
+        :root {
+            --bg: #f1f5f9;
+            --card: #ffffff;
+            --primary: #2563eb;
+            --text-dark: #0f172a;
+            --text-light: #64748b;
+            --border: #e2e8f0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: var(--text-dark);
+            margin: 0;
+            padding: 24px;
+        }
+
+        .dashboard-container {
+            max-width: 1400px; /* Wider for dashboard view */
+            margin: 0 auto;
+        }
+
+        header {
+            margin-bottom: 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 { margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.03em; }
+        p.subtitle { color: var(--text-light); margin: 4px 0 0; }
+
+        /* KPI Cards */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 32px;
+        }
+
+        .kpi-card {
+            background: var(--card);
+            padding: 24px;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+            border: 1px solid var(--border);
+            position: relative;
+        }
+
+        .kpi-label { color: var(--text-light); font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+        .kpi-value { font-size: 36px; font-weight: 700; color: var(--primary); margin: 12px 0; letter-spacing: -0.04em;}
+        .kpi-sub { font-size: 13px; color: var(--text-dark); font-weight: 500; }
+
+        /* Chart Card */
+        .chart-card {
+            background: var(--card);
+            padding: 20px 24px 24px 24px;
+            border-radius: 20px;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+            border: 1px solid var(--border);
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .chart-title { font-size: 18px; font-weight: 600; color: var(--text-dark); }
+        
+        #resetBtn {
+            display: none; /* Hidden by default */
+            padding: 8px 16px;
+            background-color: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-family: 'Inter', sans-serif;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        #resetBtn:hover { background-color: #1d4ed8; }
+
+        #mainChart {
+            width: 100%;
+            height: 650px; /* Tall for detailed analysis */
+        }
+
+        #errorOverlay {
+            display: none;
+            background: #fef2f2;
+            color: #991b1b;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            font-size: 14px;
+            border: 1px solid #fee2e2;
+        }
     </style>
 </head>
 <body>
 
 <div class="dashboard-container">
+    <div id="errorOverlay">
+        <strong>Security Pre-check Failed:</strong> Browsers require a local server to read JSON files. <br>
+        Run <code>npx serve .</code> in your terminal and visit the generated URL.
+    </div>
+
     <header>
         <div>
-            <h1 style="margin:0">Rate Intelligence</h1>
-            <p style="color:#64748b; margin:4px 0">Click any line or legend item to focus</p>
+            <h1>Market Rate Intelligence</h1>
+            <p class="subtitle">Verifiable High-Yield Savings Performance</p>
         </div>
-        <button id="resetBtn" onclick="resetChart()">Reset View</button>
+        <div style="font-size: 12px; color: var(--text-light); text-align: right;">
+            Data Source: <code>/data/rates.json</code>
+        </div>
     </header>
 
+    <div class="summary-grid" id="kpiGrid">
+        </div>
+
     <div class="chart-card">
+        <div class="chart-header">
+            <div class="chart-title">Historical Trends & Comparisons</div>
+            <button id="resetBtn" onclick="resetChart()">Clear Selection</button>
+        </div>
         <div id="mainChart"></div>
     </div>
 </div>
 
 <script>
+    // Lead SWE: Master variables to hold data and chart instance
+    let ratesData = null;
     let myChart = null;
-    let rawData = null;
-    let bankNames = [];
-    const MASTER_COLORS = ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#f43f5e', '#14b8a6'];
+    let selectedBankName = null;
 
-    async function init() {
+    // UX: Define standard and desaturated color palettes
+    const MASTER_COLORS = ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#f43f5e', '#14b8a6', '#475569'];
+    const GRAYOUT_COLOR = '#e2e8f0'; // Tailwind gray-200
+
+    async function initDashboard() {
         try {
             const response = await fetch('./data/rates.json');
-            rawData = await response.json();
-            bankNames = Object.keys(rawData[0]).filter(k => k !== 'date');
-            
-            const chartDom = document.getElementById('mainChart');
-            myChart = echarts.init(chartDom);
-            
-            renderChart(null); // Start with no focus
+            if (!response.ok) throw new Error('Fetch Blocked (CORS) or File Not Found');
+            ratesData = await response.json();
 
-            // Handle Click on Lines
-            myChart.on('click', (params) => {
-                if (params.componentType === 'series') {
-                    renderChart(params.seriesName);
-                }
-            });
-
-            // Handle Click on Legend
-            myChart.on('legendselectchanged', (params) => {
-                renderChart(params.name);
-            });
-
-            window.addEventListener('resize', () => myChart.resize());
-        } catch (e) {
-            console.error("Fail:", e);
+            renderKPIs(ratesData);
+            renderChart(ratesData);
+        } catch (err) {
+            document.getElementById('errorOverlay').style.display = 'block';
+            console.error(err);
         }
     }
 
-    function renderChart(focusBank) {
-        const resetBtn = document.getElementById('resetBtn');
-        resetBtn.style.display = focusBank ? 'block' : 'none';
+    function renderKPIs(data) {
+        const lastEntry = data[data.length - 1];
+        const banks = Object.keys(lastEntry).filter(k => k !== 'date');
+        
+        let marketLeader = { name: '', rate: 0 };
+        banks.forEach(bank => {
+            if (lastEntry[bank] > marketLeader.rate) {
+                marketLeader = { name: bank, rate: lastEntry[bank] };
+            }
+        });
 
-        const option = {
-            animation: false, // Set to false for instant state switching
-            color: MASTER_COLORS,
+        document.getElementById('kpiGrid').innerHTML = `
+            <div class="kpi-card">
+                <div class="kpi-label">Market Leader</div>
+                <div class="kpi-value">${marketLeader.rate.toFixed(2)}%</div>
+                <div class="kpi-sub">${marketLeader.name.replace(/_/g, ' ')}</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Institutions Tracked</div>
+                <div class="kpi-value">${banks.length}</div>
+                <div class="kpi-sub">Active Data Streams</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Last Snapshot</div>
+                <div class="kpi-value" style="font-size: 26px;">${lastEntry.date}</div>
+                <div class="kpi-sub">Verified Verified Data Point</div>
+            </div>
+        `;
+    }
+
+    function renderChart(data) {
+        const chartDom = document.getElementById('mainChart');
+        myChart = echarts.init(chartDom);
+        const banks = Object.keys(data[0]).filter(k => k !== 'date');
+
+        // Lead SWE: Initial option (the "Normal" view)
+        const initialOption = {
+            color: MASTER_COLORS, // Standard colors used initially
             tooltip: {
                 trigger: 'axis',
+                backgroundColor: 'rgba(255, 255, 255, 0.98)',
+                padding: 15,
+                borderRadius: 12,
+                shadowColor: 'rgba(0,0,0,0.1)',
+                shadowBlur: 10,
+                borderWidth: 0,
                 order: 'seriesDesc',
-                valueFormatter: (v) => v ? v.toFixed(2) + '%' : '—'
+                textStyle: { fontFamily: 'Inter', fontSize: 13 },
+                valueFormatter: (value) => value != null ? `<strong>${value.toFixed(2)}%</strong>` : '—'
             },
             legend: {
-                bottom: 0,
-                selectedMode: false, // We handle selection manually
-                data: bankNames.map((name, index) => ({
-                    name: name,
-                    itemStyle: {
-                        // If focusing, gray out the legend icons too
-                        color: !focusBank || name === focusBank ? MASTER_COLORS[index % MASTER_COLORS.length] : '#ccc'
-                    }
-                }))
+                show: true,
+                bottom: 10,
+                icon: 'circle',
+                itemGap: 20,
+                textStyle: { fontFamily: 'Inter', fontSize: 12 }
             },
-            grid: { top: 40, bottom: 80, left: 50, right: 50 },
-            dataZoom: [{ type: 'slider', bottom: 40, height: 20 }],
-            xAxis: { type: 'time' },
-            yAxis: { type: 'value', min: 'dataMin', axisLabel: { formatter: '{value}%' } },
-            series: bankNames.map((name, index) => {
-                const isFocused = !focusBank || name === focusBank;
-                const baseColor = MASTER_COLORS[index % MASTER_COLORS.length];
-
-                return {
-                    name: name,
-                    type: 'line',
-                    step: 'end',
-                    symbol: 'none',
-                    connectNulls: true,
-                    z: isFocused ? 10 : 1, // Bring focused line to front
-                    lineStyle: {
-                        color: isFocused ? baseColor : '#e2e8f0',
-                        width: isFocused ? 4 : 1,
-                        opacity: isFocused ? 1 : 0.3
-                    },
-                    data: rawData.map(d => [d.date, d[name]])
-                };
-            })
+            grid: { top: 30, left: '3%', right: '3%', bottom: 120, containLabel: true },
+            dataZoom: [{ type: 'slider', start: 85, end: 100, bottom: 60, height: 26 }],
+            xAxis: { 
+                type: 'time', 
+                axisLine: { lineStyle: { color: '#e2e8f0' } },
+                axisLabel: { color: '#94a3b8', margin: 15 }
+            },
+            yAxis: { 
+                type: 'value', 
+                name: 'APY (%)',
+                nameTextStyle: { color: '#94a3b8', fontSize: 11, padding: [0, 0, 10, 0] },
+                min: 'dataMin',
+                axisLabel: { formatter: '{value}%', color: '#94a3b8' },
+                splitLine: { lineStyle: { type: 'solid', color: '#f1f5f9' } }
+            },
+            series: banks.map(bank => ({
+                name: bank.replace(/_/g, ' '),
+                type: 'line',
+                step: 'end',
+                symbol: 'none',
+                connectNulls: true,
+                lineStyle: { width: 3 }, // Bold base width
+                emphasis: { 
+                    focus: 'series', 
+                    lineStyle: { width: 5 } // Built-in hover-focus remains
+                },
+                data: data.map(d => [d.date, d[bank]])
+            }))
         };
 
-        // 'true' as the second argument forces a full redraw (notMerge)
-        myChart.setOption(option, true);
+        myChart.setOption(initialOption);
+
+        // --- UX: THE CLICK-TO-FOCUS LOGIC ---
+        
+        myChart.on('click', function (params) {
+            // Check if user clicked a line series (not the axis or legend)
+            if (params.componentType === 'series' && params.seriesType === 'line') {
+                applyPersistentFocus(params.seriesName);
+            }
+        });
+
+        // Add handler for clicking standard ECharts legend too
+        myChart.on('legendselectchanged', function(params) {
+            // We are repurposing the legend click to trigger the full grayout focus
+            applyPersistentFocus(params.name);
+            // We immediately undo the standard legend 'unselect' to keep our custom state
+            myChart.dispatchAction({
+                type: 'legendSelect',
+                name: params.name
+            });
+        });
+
+        window.addEventListener('resize', myChart.resize);
     }
 
+    /**
+     * UX Logic: Grays out all banks except the clicked one.
+     */
+    function applyPersistentFocus(clickedBankName) {
+        // Prevent re-processing if the same bank is clicked
+        if (selectedBankName === clickedBankName) return;
+        selectedBankName = clickedBankName;
+        
+        const resetBtn = document.getElementById('resetBtn');
+        resetBtn.style.display = 'block'; // Show "Clear" button
+        resetBtn.textContent = `Clear (${clickedBankName})`;
+
+        // Get current legend state from chart to preserve dataZoom position etc.
+        const option = myChart.getOption();
+        const banks = ratesData[0] ? Object.keys(ratesData[0]).filter(k => k !== 'date') : [];
+        
+        // Lead SWE: Map over series to create the "Focused" configuration
+        const newSeries = option.series.map((s) => {
+            const isTarget = s.name === clickedBankName;
+
+            return {
+                ...s,
+                // UX: If not target, desaturate and thin. If target, bold and original color.
+                lineStyle: isTarget ? { color: s.lineStyle.color, width: 6, opacity: 1 } : { color: GRAYOUT_COLOR, width: 1, opacity: 0.3 },
+                // Disable normal emphasis grayout during persistent focus
+                emphasis: isTarget ? s.emphasis : { lineStyle: { color: GRAYOUT_COLOR, width: 1, opacity: 0.3 } },
+                // Hide legend item dots for non-focused banks
+                legendHoverLink: isTarget,
+                // Force target line to be on top of the gray lines
+                z: isTarget ? 10 : 1
+            };
+        });
+
+        // UX: Deactivate default tooltip triggers to prevent standard line highlighting
+        option.tooltip.trigger = 'item'; 
+
+        // Apply new series configuration WITHOUT merging
+        myChart.setOption({ 
+            series: newSeries,
+            tooltip: option.tooltip,
+            // Visually mute legend during focus
+            legend: {
+                selectedMode: false, // Prevents normal legend clicks during focus
+                textStyle: { color: '#ccc' }
+            }
+        }, false);
+    }
+
+    /**
+     * UX Logic: Returns chart to original, multi-color view.
+     */
     function resetChart() {
-        renderChart(null);
+        if (!myChart || !selectedBankName) return;
+        selectedBankName = null;
+        
+        document.getElementById('resetBtn').style.display = 'none'; // Hide button
+
+        // Re-read current option to grab current dataZoom/position data
+        const currentOption = myChart.getOption();
+
+        // Restore series back to standard colors and width
+        const standardSeries = currentOption.series.map(s => ({
+            ...s,
+            lineStyle: { color: null, width: 3, opacity: 1 }, // color: null restores palette color
+            emphasis: { focus: 'series', lineStyle: { width: 5 } },
+            legendHoverLink: true,
+            z: 2
+        }));
+
+        // Reset option without merge to standard multi-color configuration
+        myChart.setOption({
+            series: standardSeries,
+            tooltip: { trigger: 'axis' }, // Restore normal tooltip grayout
+            color: MASTER_COLORS, // Re-apply master palette
+            legend: {
+                selectedMode: true,
+                textStyle: { color: '#555' }
+            }
+        }, false);
     }
 
-    init();
+    initDashboard();
 </script>
 
 </body>
