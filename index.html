@@ -24,18 +24,14 @@
         }
 
         .dashboard-container {
-            max-width: 1200px;
+            max-width: 1400px; /* Slightly wider for better readability */
             margin: 0 auto;
         }
 
-        header {
-            margin-bottom: 32px;
-        }
-
+        header { margin-bottom: 32px; }
         h1 { margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.02em; }
         p.subtitle { color: var(--text-light); margin: 4px 0 0; }
 
-        /* KPI Cards */
         .summary-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -55,7 +51,6 @@
         .kpi-value { font-size: 32px; font-weight: 700; color: var(--primary); margin: 8px 0; }
         .kpi-sub { font-size: 12px; color: #10b981; font-weight: 600; }
 
-        /* Main Chart Card */
         .chart-card {
             background: var(--card);
             padding: 24px;
@@ -66,7 +61,7 @@
 
         #mainChart {
             width: 100%;
-            height: 600px;
+            height: 750px; /* Increased height to accommodate the large legend */
         }
 
         #errorOverlay {
@@ -93,8 +88,7 @@
         <p class="subtitle">High-Yield Savings Performance Analysis</p>
     </header>
 
-    <div class="summary-grid" id="kpiGrid">
-        </div>
+    <div class="summary-grid" id="kpiGrid"></div>
 
     <div class="chart-card">
         <div id="mainChart"></div>
@@ -107,7 +101,6 @@
             const response = await fetch('./data/rates.json');
             if (!response.ok) throw new Error('CORS or File Not Found');
             const data = await response.json();
-
             renderKPIs(data);
             renderChart(data);
         } catch (err) {
@@ -119,8 +112,6 @@
     function renderKPIs(data) {
         const lastEntry = data[data.length - 1];
         const banks = Object.keys(lastEntry).filter(k => k !== 'date');
-        
-        // Find current market leader
         let leader = { name: '', rate: 0 };
         banks.forEach(bank => {
             if (lastEntry[bank] > leader.rate) {
@@ -154,7 +145,7 @@
         const banks = Object.keys(data[0]).filter(k => k !== 'date');
 
         const option = {
-            color: ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#f43f5e', '#14b8a6'],
+            color: ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#f43f5e', '#14b8a6', '#6366f1', '#ec4899'],
             tooltip: {
                 trigger: 'axis',
                 backgroundColor: '#fff',
@@ -166,12 +157,28 @@
                 textStyle: { fontFamily: 'Inter', fontSize: 13 }
             },
             legend: {
-                bottom: 10,
+                type: 'plain', // Shows all banks without scrolling
+                bottom: 0,     // Stuck to the absolute bottom
                 icon: 'circle',
-                itemGap: 20
+                itemGap: 15,
+                textStyle: { fontSize: 12 }
             },
-            grid: { top: 40, left: 40, right: 40, bottom: 100, containLabel: true },
-            dataZoom: [{ type: 'slider', start: 80, end: 100, bottom: 50, height: 24 }],
+            grid: { 
+                top: 40, 
+                left: 50, 
+                right: 50, 
+                bottom: 220, // MASSIVE margin to accommodate zoom AND a multi-line legend
+                containLabel: true 
+            },
+            dataZoom: [{ 
+                type: 'slider', 
+                start: 85, 
+                end: 100, 
+                bottom: 140, // Higher up so it clears the legend
+                height: 30 
+            }, { 
+                type: 'inside' 
+            }],
             xAxis: { 
                 type: 'time', 
                 axisLine: { lineStyle: { color: '#e2e8f0' } },
