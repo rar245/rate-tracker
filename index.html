@@ -80,4 +80,136 @@
             text-transform: uppercase;
             font-size: 11px;
             letter-spacing: 0.05em;
-            border-bottom: 1px solid var
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+        }
+
+        td {
+            padding: 14px 16px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover {
+            background-color: #f1f5f9;
+        }
+
+        .rate-value {
+            font-weight: 600;
+            color: var(--primary);
+            font-variant-numeric: tabular-nums; /* Keeps numbers aligned */
+        }
+
+        .date-cell {
+            color: var(--text-muted);
+            white-space: nowrap;
+            font-family: monospace;
+        }
+
+        #errorMessage {
+            display: none;
+            padding: 20px;
+            background: var(--error-bg);
+            color: var(--error-text);
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #fee2e2;
+            line-height: 1.5;
+        }
+
+        @media (max-width: 768px) {
+            body { padding: 20px 10px; }
+            header { flex-direction: column; align-items: flex-start; gap: 10px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="errorMessage">
+        <strong>Data Load Blocked:</strong> Browsers block local file access for security. <br>
+        To fix this, run <code>npx serve .</code> in your terminal and open the link provided.
+    </div>
+
+    <header>
+        <div>
+            <h1>Savings Rate Repository</h1>
+            <div class="status">Source: <code>/data/rates.json</code></div>
+        </div>
+        <div class="status" id="lastUpdated">Syncing master data...</div>
+    </header>
+
+    <div class="card">
+        <table id="ratesTable">
+            <thead>
+                <tr id="headerRow"></tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    async function loadRates() {
+        const errorEl = document.getElementById('errorMessage');
+        const updateEl = document.getElementById('lastUpdated');
+        
+        try {
+            // Path adjusted to your shared directory structure
+            const response = await fetch('./data/rates.json');
+            if (!response.ok) throw new Error('File not found');
+            
+            const data = await response.json();
+            
+            // 1. Update Status
+            updateEl.textContent = `Last Entry: ${data[data.length - 1].date}`;
+            
+            // 2. Reverse to show Newest First
+            const displayData = [...data].reverse();
+            const keys = Object.keys(data[0]);
+
+            // 3. Build Headers
+            const headerRow = document.getElementById('headerRow');
+            keys.forEach(key => {
+                const th = document.createElement('th');
+                th.textContent = key.replace(/_/g, ' ');
+                headerRow.appendChild(th);
+            });
+
+            // 4. Build Rows
+            const tbody = document.getElementById('tableBody');
+            displayData.forEach(row => {
+                const tr = document.createElement('tr');
+                keys.forEach(key => {
+                    const td = document.createElement('td');
+                    if (key === 'date') {
+                        td.className = 'date-cell';
+                        td.textContent = row[key];
+                    } else {
+                        td.className = 'rate-value';
+                        // Handle null values gracefully
+                        td.textContent = (row[key] !== null && row[key] !== undefined) 
+                            ? row[key].toFixed(2) + '%' 
+                            : '—';
+                    }
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+
+        } catch (err) {
+            console.error("Layout Error:", err);
+            errorEl.style.display = 'block';
+            updateEl.textContent = "Sync Failed";
+        }
+    }
+
+    loadRates();
+</script>
+
+</body>
+</html>
