@@ -2,71 +2,93 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Rate Tracker Legacy</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rate Tracker | Terminal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
     <style>
-        body { font-family: sans-serif; margin: 20px; background: #f4f4f4; }
-        .container { width: 90%; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        #chartWrapper { height: 500px; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h2 style="text-align: center;">HYSA Rate History</h2>
-        <div id="chartWrapper">
-            <canvas id="myChart"></canvas>
-        </div>
-    </div>
-
-    <script>
-        const bankColors = {
-            "Marcus": "#003366", "Newtek": "#005596", "EverBank": "#0072CE",
-            "Axos Bank": "#000000", "CIT Bank": "#2E8B57", "Bread Savings": "#F2AF00",
-            "SoFi": "#00C2FF", "Ally": "#500078", "Discover": "#FF6600",
-            "Capital One": "#D10032", "Amex": "#0070D1"
-        };
-
-        async function init() {
-            const url = `https://raw.githubusercontent.com/rar245/rate-tracker/main/data/rates.json?t=${Date.now()}`;
-            const res = await fetch(url);
-            const data = await res.json();
-
-            const denylist = ["date", "Chase", "BofA", "Wells Fargo", "National Avg"];
-            // Dynamically find all banks that aren't on the denylist
-            const bankNames = Object.keys(data[0]).filter(key => !denylist.includes(key));
-            
-            const datasets = bankNames.map(name => ({
-                label: name,
-                data: data.map(entry => entry[name]),
-                borderColor: bankColors[name] || '#999',
-                backgroundColor: bankColors[name] || '#999',
-                borderWidth: 2,
-                tension: 0.3,
-                spanGaps: true // Same as connectNulls
-            }));
-
-            new Chart(document.getElementById('myChart'), {
-                type: 'line',
-                data: {
-                    labels: data.map(entry => entry.date),
-                    datasets: datasets
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: { 
-                            ticks: { callback: (v) => v + '%' },
-                            grace: '5%' // Adds a little padding at top/bottom
-                        }
-                    },
-                    plugins: {
-                        legend: { position: 'bottom' }
-                    }
-                }
-            });
+        :root {
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --primary: #2563eb;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
         }
-        init();
-    </script>
-</body>
-</html>
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1000px;
+        }
+
+        header {
+            margin-bottom: 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+        }
+
+        .status {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f1f5f9;
+            padding: 16px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.05em;
+        }
+
+        td {
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover {
+            background-color: #f8fafc;
+        }
+
+        .rate-value {
+            font-weight: 600;
+            color: var(--primary);
