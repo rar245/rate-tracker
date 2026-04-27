@@ -3,11 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Rate Tracker | Theme-Sync Build</title>
+    <title>Rate Tracker | Safety-Zone Build</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.0/echarts.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
     <style>
-        /* THEME VARIABLES */
         :root {
             --bg: #f8fafc;
             --surface: #ffffff;
@@ -15,7 +14,6 @@
             --text: #0f172a;
             --text-muted: #64748b;
             --border: #e2e8f0;
-            --chart-grid: #f1f5f9;
         }
 
         [data-theme="dark"] {
@@ -25,13 +23,36 @@
             --text: #f8fafc;
             --text-muted: #94a3b8;
             --border: #334155;
-            --chart-grid: #334155;
         }
 
-        html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; background-color: var(--bg); font-family: 'Inter', sans-serif; color: var(--text); transition: background-color 0.3s; }
-        .app-container { display: flex; height: 100vh; width: 100vw; }
+        html, body { 
+            height: 100%; 
+            margin: 0; 
+            padding: 0; 
+            overflow: hidden; 
+            background-color: var(--bg); 
+            font-family: 'Inter', sans-serif; 
+            color: var(--text); 
+        }
+
+        .app-container { 
+            display: flex; 
+            height: 100vh; 
+            width: 100vw; 
+            /* THE CRITICAL FIX: Bottom padding to push EVERYTHING up */
+            padding-bottom: 40px; 
+            box-sizing: border-box;
+        }
         
-        aside { width: 240px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; transition: background-color 0.3s; }
+        aside { 
+            width: 240px; 
+            background: var(--surface); 
+            border-right: 1px solid var(--border); 
+            display: flex; 
+            flex-direction: column; 
+            flex-shrink: 0; 
+        }
+
         .bank-list { overflow-y: auto; flex: 1; padding: 15px; }
         .bank-item { padding: 8px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; font-size: 12px; margin-bottom: 4px; border: 1px solid transparent; }
         .bank-item.active { background: rgba(56, 189, 248, 0.1); border-color: var(--primary); font-weight: 600; color: var(--primary); }
@@ -40,27 +61,23 @@
 
         main { flex: 1; display: flex; flex-direction: column; height: 100%; overflow: hidden; }
         .top-section { padding: 20px; flex-shrink: 0; }
-        .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 15px; }
-        .kpi-card { background: var(--surface); padding: 12px; border-radius: 10px; border: 1px solid var(--border); }
-        .kpi-val { font-family: 'JetBrains Mono', monospace; font-size: 20px; font-weight: 700; color: #10b981; }
+        .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 10px; }
+        .kpi-card { background: var(--surface); padding: 10px; border-radius: 10px; border: 1px solid var(--border); }
+        .kpi-val { font-family: 'JetBrains Mono', monospace; font-size: 18px; font-weight: 700; color: #10b981; }
 
-        .chart-section { flex: 1; margin: 0 20px 20px 20px; background: var(--surface); border-radius: 12px; border: 1px solid var(--border); position: relative; min-height: 0; }
+        .chart-section { 
+            flex: 1; 
+            margin: 0 20px 0 20px; 
+            background: var(--surface); 
+            border-radius: 12px; 
+            border: 1px solid var(--border); 
+            position: relative;
+            /* MATHEMATICAL SHRINK: Forces space for the slider */
+            max-height: calc(100vh - 220px); 
+        }
         #mainChart { height: 100%; width: 100%; }
 
-        /* THEME TOGGLE BUTTON */
-        .theme-toggle {
-            background: var(--bg);
-            border: 1px solid var(--border);
-            color: var(--text);
-            padding: 5px 10px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 10px;
-            font-weight: 700;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
+        .theme-toggle { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 10px; font-weight: 700; }
     </style>
 </head>
 <body data-theme="dark">
@@ -82,7 +99,7 @@
 
     <main>
         <div class="top-section">
-            <h1 style="margin:0; font-size: 20px;">Rate Intelligence <span style="opacity:0.5;">v2.0</span></h1>
+            <h1 style="margin:0; font-size: 18px;">Rate Intelligence <span style="opacity:0.5;">v2.0</span></h1>
             <div class="kpi-grid" id="kpiRow"></div>
         </div>
         <div class="chart-section">
@@ -97,23 +114,14 @@
     
     let myChart, masterData, selectedBanks = new Set();
 
-    // --- THEME ENGINE ---
     function toggleTheme() {
         const body = document.body;
         const currentTheme = body.getAttribute('data-theme');
         const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-        
         body.setAttribute('data-theme', newTheme);
         document.getElementById('themeBtn').innerHTML = newTheme === 'dark' ? '🌙 DARK' : '☀️ LIGHT';
-        localStorage.setItem('rate-tracker-theme', newTheme);
-        
-        if (myChart) renderChart(Object.keys(masterData[0]).filter(k => k !== 'date'));
+        if (myChart) renderChart();
     }
-
-    // Load saved theme
-    const savedTheme = localStorage.getItem('rate-tracker-theme') || 'dark';
-    document.body.setAttribute('data-theme', savedTheme);
-    document.getElementById('themeBtn').innerHTML = savedTheme === 'dark' ? '🌙 DARK' : '☀️ LIGHT';
 
     async function init() {
         try {
@@ -141,7 +149,7 @@
         const banks = Object.keys(masterData[0]).filter(k => k !== 'date');
         renderKPIs();
         renderSidebar(banks);
-        renderChart(banks);
+        renderChart();
     }
 
     function renderKPIs() {
@@ -178,8 +186,9 @@
         update();
     }
 
-    function renderChart(banks) {
+    function renderChart() {
         const isDark = document.body.getAttribute('data-theme') === 'dark';
+        const banks = Object.keys(masterData[0]).filter(k => k !== 'date');
         const option = {
             backgroundColor: 'transparent',
             tooltip: {
@@ -199,12 +208,16 @@
                     return res;
                 }
             },
-            grid: { top: 30, left: 10, right: 10, bottom: 85, containLabel: true },
+            grid: { top: 20, left: 10, right: 10, bottom: 65, containLabel: true },
             dataZoom: [{ 
-                type: 'slider', bottom: 25, height: 35, 
-                borderColor: 'transparent', backgroundColor: isDark ? '#0f172a' : '#f1f5f9',
+                type: 'slider', 
+                bottom: 10, 
+                height: 30, 
+                borderColor: 'transparent', 
+                backgroundColor: isDark ? '#0f172a' : '#f1f5f9',
                 fillerColor: isDark ? 'rgba(56, 189, 248, 0.1)' : 'rgba(37, 99, 235, 0.1)',
-                handleStyle: { color: isDark ? '#38bdf8' : '#2563eb' }, textStyle: { color: isDark ? '#94a3b8' : '#64748b' },
+                handleStyle: { color: isDark ? '#38bdf8' : '#2563eb' }, 
+                textStyle: { color: isDark ? '#94a3b8' : '#64748b' },
                 start: 80, end: 100
             }, { type: 'inside' }],
             xAxis: { type: 'time', axisLine: { lineStyle: { color: isDark ? '#334155' : '#e2e8f0' } }, splitLine: { show: false } },
