@@ -1,180 +1,417 @@
-<!DOCTYPE html>
 <html lang="en">
+
 <head>
+
     <meta charset="UTF-8">
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Rate Tracker | Cloud-Sync Build</title>
+
+    <title>Rate Tracker | Final Stability Build</title>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.0/echarts.min.js"></script>
+
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+
     <style>
+
         :root { --bg: #0f172a; --surface: #1e293b; --primary: #38bdf8; --text: #f8fafc; --border: #334155; }
-        html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; background-color: var(--bg); font-family: 'Inter', sans-serif; color: var(--text); }
-        .app-container { display: flex; height: 100vh; width: 100vw; }
-        aside { width: 240px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; }
+
+        
+
+        /* 1. FORCE THE VIEWPORT */
+
+        html, body { 
+
+            height: 100%; 
+
+            margin: 0; 
+
+            padding: 0; 
+
+            overflow: hidden; /* No page scrolling allowed */
+
+            background-color: var(--bg);
+
+            color: var(--text);
+
+            font-family: 'Inter', sans-serif;
+
+        }
+
+
+
+        .app-container {
+
+            display: flex;
+
+            height: 100vh; /* Exactly 100% of the visible window */
+
+            width: 100vw;
+
+        }
+
+
+
+        /* 2. SIDEBAR */
+
+        aside { 
+
+            width: 240px; 
+
+            background: var(--surface); 
+
+            border-right: 1px solid var(--border); 
+
+            display: flex; 
+
+            flex-direction: column; 
+
+            flex-shrink: 0; /* Sidebar NEVER shrinks */
+
+        }
+
+
+
         .bank-list { overflow-y: auto; flex: 1; padding: 15px; }
-        .bank-item { padding: 8px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; font-size: 12px; margin-bottom: 4px; border: 1px solid transparent; transition: 0.2s; }
-        .bank-item.active { background: rgba(56, 189, 248, 0.1); border-color: var(--primary); font-weight: 600; color: var(--primary); }
+
+        .bank-item { padding: 8px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; font-size: 12px; margin-bottom: 4px; border: 1px solid transparent; }
+
+        .bank-item.active { background: rgba(56, 189, 248, 0.1); border-color: var(--primary); font-weight: 600; }
+
         .color-dot { width: 8px; height: 8px; border-radius: 50%; margin-right: 10px; opacity: 0.2; }
-        .active .color-dot { opacity: 1; box-shadow: 0 0 8px currentColor; }
-        main { flex: 1; display: flex; flex-direction: column; height: 100%; overflow: hidden; }
-        .top-section { padding: 20px; flex-shrink: 0; }
+
+        .active .color-dot { opacity: 1; }
+
+
+
+        /* 3. MAIN CONTENT (THE SANDWICH) */
+
+        main { 
+
+            flex: 1; 
+
+            display: flex; 
+
+            flex-direction: column; /* Stack top to bottom */
+
+            height: 100%;
+
+            overflow: hidden;
+
+        }
+
+
+
+        /* Top part of the sandwich (Fixed height) */
+
+        .top-section { 
+
+            padding: 20px; 
+
+            flex-shrink: 0; /* Header NEVER shrinks */
+
+        }
+
+
+
         .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 15px; }
+
         .kpi-card { background: var(--surface); padding: 12px; border-radius: 10px; border: 1px solid var(--border); }
+
         .kpi-val { font-family: 'JetBrains Mono', monospace; font-size: 20px; color: #10b981; font-weight: 700; }
-        .chart-section { flex: 1; margin: 0 20px 20px 20px; background: var(--surface); border-radius: 12px; border: 1px solid var(--border); position: relative; min-height: 0; }
+
+
+
+        /* Bottom part of the sandwich (Grows to fill everything else) */
+
+        .chart-section { 
+
+            flex: 1; /* TAKE ALL REMAINING SPACE */
+
+            margin: 0 20px 20px 20px; 
+
+            background: var(--surface);
+
+            border-radius: 12px;
+
+            border: 1px solid var(--border);
+
+            position: relative;
+
+            min-height: 0; /* CSS trick to allow inner chart to fit */
+
+        }
+
+
+
         #mainChart { height: 100%; width: 100%; }
-        #loader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 10000; }
+
     </style>
+
 </head>
+
 <body>
 
-<div id="loader">Initializing Rate Intelligence...</div>
+
 
 <div class="app-container">
+
     <aside>
+
         <div style="padding: 20px; border-bottom: 1px solid var(--border);">
-            <h2 style="font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: #94a3b8; margin:0;">Institutions</h2>
+
+            <h2 style="font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: #94a3b8; margin:0;">Banks</h2>
+
             <div style="display:flex; gap:5px; margin-top:10px;">
-                <button onclick="toggleAll(true)" style="flex:1; font-size:9px; padding:5px; cursor:pointer; background:#334155; color:white; border:none; border-radius:4px;">ALL</button>
-                <button onclick="toggleAll(false)" style="flex:1; font-size:9px; padding:5px; cursor:pointer; background:#334155; color:white; border:none; border-radius:4px;">NONE</button>
+
+                <button onclick="toggleAll(true)" style="flex:1; font-size:9px; padding:5px; cursor:pointer;">ALL</button>
+
+                <button onclick="toggleAll(false)" style="flex:1; font-size:9px; padding:5px; cursor:pointer;">NONE</button>
+
             </div>
+
         </div>
+
         <div class="bank-list" id="bankList"></div>
+
     </aside>
 
+
+
     <main>
+
         <div class="top-section">
+
             <h1 style="margin:0; font-size: 20px;">Rate Intelligence v2.0</h1>
+
             <div class="kpi-grid" id="kpiRow"></div>
+
         </div>
+
+
+
         <div class="chart-section">
+
             <div id="mainChart"></div>
+
         </div>
+
     </main>
+
 </div>
 
+
+
 <script>
+
     const COLORS = ['#38bdf8', '#10b981', '#fbbf24', '#f87171', '#818cf8', '#22d3ee', '#fb7185', '#c084fc', '#6366f1'];
-    // USING YOUR GITHUB RAW URL TO BYPASS LOCAL PATH ISSUES
-    const DATA_URL = 'https://raw.githubusercontent.com/rar245/rate-tracker/main/data/rates.json';
-    
+
     let myChart, masterData, selectedBanks = new Set();
 
+
+
     async function init() {
+
         try {
-            const res = await fetch(DATA_URL);
-            if (!res.ok) throw new Error("Failed to reach GitHub Data.");
-            
+
+            const res = await fetch('./data/rates.json');
+
             masterData = await res.json();
+
             const banks = Object.keys(masterData[0]).filter(k => k !== 'date');
+
             
+
+            // Start with Market Leader selected
+
             const last = masterData[masterData.length - 1];
+
             let leader = banks[0];
+
             banks.forEach(b => { if(last[b] > last[leader]) leader = b; });
+
             selectedBanks.add(leader);
 
+
+
             myChart = echarts.init(document.getElementById('mainChart'));
-            
-            // Re-enabling the clickable lines feature
-            myChart.on('click', (params) => {
-                if (params.componentType === 'series') toggleBank(params.seriesName);
-            });
 
             update();
-            document.getElementById('loader').style.display = 'none';
+
             window.addEventListener('resize', () => myChart.resize());
-        } catch (e) {
-            document.getElementById('loader').innerHTML = `<div style="color:#f87171; text-align:center;">
-                <strong>LOAD ERROR:</strong><br>${e.message}<br><br>
-                Check your internet connection or GitHub repo status.
-            </div>`;
-        }
+
+        } catch (e) { console.error("Init fail", e); }
+
     }
+
+
 
     function update() {
+
         const banks = Object.keys(masterData[0]).filter(k => k !== 'date');
+
         renderKPIs();
+
         renderSidebar(banks);
+
         renderChart(banks);
+
     }
+
+
 
     function renderKPIs() {
+
         const last = masterData[masterData.length - 1];
+
         const banks = Object.keys(last).filter(k => k !== 'date');
+
         let leader = { name: '', rate: 0 }, sum = 0, count = 0;
+
         banks.forEach(b => {
+
             const r = last[b];
+
             if (r > leader.rate) leader = { name: b, rate: r };
+
             if (r > 0) { sum += r; count++; }
+
         });
+
         document.getElementById('kpiRow').innerHTML = `
+
             <div class="kpi-card"><div style="font-size:9px; color:#94a3b8">LEADER</div><div class="kpi-val">${leader.rate.toFixed(2)}%</div><div style="font-size:9px">${leader.name}</div></div>
+
             <div class="kpi-card"><div style="font-size:9px; color:#94a3b8">AVG APY</div><div class="kpi-val">${(sum/count).toFixed(2)}%</div><div style="font-size:9px">Current</div></div>
-            <div class="kpi-card"><div style="font-size:9px; color:#94a3b8">SNAPSHOT</div><div class="kpi-val" style="font-size:16px; color:#38bdf8;">${last.date}</div><div style="font-size:9px">Verified</div></div>`;
+
+            <div class="kpi-card"><div style="font-size:9px; color:#94a3b8">SNAPSHOT</div><div class="kpi-val" style="font-size:16px">${last.date}</div><div style="font-size:9px">Verified</div></div>`;
+
     }
+
+
 
     function renderSidebar(banks) {
+
         document.getElementById('bankList').innerHTML = banks.map((b, i) => `
+
             <div class="bank-item ${selectedBanks.has(b) ? 'active' : ''}" onclick="toggleBank('${b}')">
+
                 <div class="color-dot" style="background-color: ${COLORS[i % COLORS.length]}"></div>
+
                 <span>${b}</span>
+
             </div>`).join('');
+
     }
+
+
 
     function toggleBank(name) {
+
         selectedBanks.has(name) ? selectedBanks.delete(name) : selectedBanks.add(name);
+
         update();
+
     }
+
+
 
     function toggleAll(show) {
-        const banks = Object.keys(masterData[0]).filter(k => k !== 'date');
-        selectedBanks = show ? new Set(banks) : new Set();
+
+        selectedBanks = show ? new Set(Object.keys(masterData[0]).filter(k => k !== 'date')) : new Set();
+
         update();
+
     }
+
+
 
     function renderChart(banks) {
+
         const option = {
+
             tooltip: {
+
                 trigger: 'axis',
+
                 backgroundColor: '#1e293b',
+
                 borderColor: '#334155',
+
                 textStyle: { color: '#f8fafc', fontSize: 11 },
+
                 formatter: (params) => {
-                    let res = `<div style="border-bottom:1px solid #444;margin-bottom:5px;padding-bottom:3px"><b>${params[0].axisValueLabel}</b></div>`;
-                    params.filter(p => p.value[1] !== null).sort((a,b) => b.value[1] - a.value[1]).forEach(p => {
-                        const isSel = selectedBanks.has(p.seriesName);
-                        res += `<div style="display:flex;justify-content:space-between;gap:15px; opacity:${isSel ? 1 : 0.3}; padding: 2px 0;">
-                                    <span>${p.marker}${p.seriesName}</span>
-                                    <b style="color:${isSel ? '#38bdf8' : '#94a3b8'}">${p.value[1].toFixed(2)}%</b>
-                                </div>`;
+
+                    let res = `<div style="border-bottom:1px solid #444;margin-bottom:5px"><b>${params[0].axisValueLabel}</b></div>`;
+
+                    params.filter(p => p.value[1] !== null).forEach(p => {
+
+                        res += `<div style="display:flex;justify-content:space-between;gap:15px;"><span>${p.marker}${p.seriesName}</span><b>${p.value[1].toFixed(2)}%</b></div>`;
+
                     });
+
                     return res;
+
                 }
+
             },
-            grid: { top: 30, left: 10, right: 10, bottom: 85, containLabel: true },
+
+            grid: { top: 20, left: 10, right: 10, bottom: 60, containLabel: true },
+
             dataZoom: [{ 
-                type: 'slider', bottom: 25, height: 35, 
-                borderColor: 'transparent', backgroundColor: '#0f172a',
+
+                type: 'slider', 
+
+                bottom: 10, 
+
+                height: 30, 
+
+                borderColor: 'transparent', 
+
+                backgroundColor: '#0f172a',
+
                 fillerColor: 'rgba(56, 189, 248, 0.1)',
-                handleStyle: { color: '#38bdf8' }, textStyle: { color: '#94a3b8' },
+
+                handleStyle: { color: '#38bdf8' },
+
+                textStyle: { color: '#94a3b8' },
+
                 start: 80, end: 100
-            }, { type: 'inside' }],
-            xAxis: { type: 'time', axisLine: { lineStyle: { color: '#334155' } }, splitLine: { show: false } },
+
+            }],
+
+            xAxis: { type: 'time', axisLine: { lineStyle: { color: '#334155' } } },
+
             yAxis: { type: 'value', min: 'dataMin', axisLabel: { formatter: '{value}%', color: '#94a3b8' }, splitLine: { lineStyle: { color: '#334155', type: 'dashed' } } },
+
             series: banks.map((name, i) => {
+
                 const sel = selectedBanks.has(name);
+
                 return {
-                    name, type: 'line', step: 'end', symbol: 'none', connectNulls: true, z: sel ? 100 : 1,
-                    lineStyle: { color: sel ? COLORS[i % COLORS.length] : '#1e293b', width: sel ? 3.5 : 1.5, opacity: sel ? 1 : 0.1 },
+
+                    name, type: 'line', step: 'end', symbol: 'none', connectNulls: true, z: sel ? 10 : 1,
+
+                    lineStyle: { color: sel ? COLORS[i % COLORS.length] : '#1e293b', width: sel ? 3 : 1, opacity: sel ? 1 : 0.05 },
+
                     data: masterData.map(d => [d.date, d[name]])
+
                 };
+
             })
+
         };
+
         myChart.setOption(option, true);
+
     }
 
-    // FIRE THE SCRIPT
+
+
     init();
+
 </script>
+
 </body>
+
 </html>
