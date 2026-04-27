@@ -4,14 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rate Tracker Pro | Unified View</title>
-    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.0/echarts.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg: #0f172a;
             --surface: #1e293b;
             --primary: #38bdf8;
-            --accent: #10b981;
             --text: #f8fafc;
             --text-muted: #94a3b8;
             --border: #334155;
@@ -24,10 +23,10 @@
             margin: 0;
             display: flex;
             height: 100vh;
-            overflow: hidden; /* Prevents the whole page from scrolling */
+            overflow: hidden;
         }
 
-        /* SIDEBAR: Permanent Legend */
+        /* Sidebar Legend */
         aside {
             width: 260px;
             min-width: 260px;
@@ -38,60 +37,34 @@
             padding: 20px;
         }
 
-        .sidebar-header { 
-            padding-bottom: 15px;
-            border-bottom: 1px solid var(--border);
-            margin-bottom: 15px;
-        }
-        
-        .sidebar-header h2 { 
-            font-size: 12px; 
-            color: var(--text-muted); 
-            text-transform: uppercase; 
-            letter-spacing: 1.5px;
-            margin: 0;
-        }
-
         .bank-list {
-            overflow-y: auto; /* Only the list scrolls if it gets too long */
+            overflow-y: auto;
             flex-grow: 1;
-            padding-right: 5px;
         }
-
-        /* Custom Scrollbar for the list */
-        .bank-list::-webkit-scrollbar { width: 4px; }
-        .bank-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
 
         .bank-item {
-            padding: 8px 12px;
+            padding: 10px 12px;
             border-radius: 6px;
             margin-bottom: 4px;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: 0.2s;
             display: flex;
             align-items: center;
             font-size: 13px;
-            border: 1px solid transparent;
             color: var(--text-muted);
         }
 
         .bank-item:hover { background: #334155; color: var(--text); }
-        
         .bank-item.active { 
-            background: rgba(56, 189, 248, 0.15); 
+            background: rgba(56, 189, 248, 0.1); 
             border-color: var(--primary);
             color: var(--primary);
             font-weight: 600;
         }
 
-        .color-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            margin-right: 10px;
-        }
+        .color-dot { width: 8px; height: 8px; border-radius: 50%; margin-right: 10px; }
 
-        /* MAIN CONTENT */
+        /* Main View */
         main {
             flex-grow: 1;
             display: flex;
@@ -106,47 +79,38 @@
             border: 1px solid var(--border);
             padding: 20px;
             flex-grow: 1;
-            display: flex;
-            flex-direction: column;
         }
 
-        #mainChart { width: 100%; height: 100%; }
+        #mainChart { width: 100%; height: 100%; min-height: 400px; }
 
-        #resetBtn {
-            position: absolute;
-            top: 40px;
-            right: 40px;
-            background: var(--primary);
-            color: var(--bg);
-            border: none;
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-size: 11px;
-            font-weight: 800;
-            cursor: pointer;
-            z-index: 100;
+        #statusOverlay {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 12px;
             display: none;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            z-index: 1000;
         }
     </style>
 </head>
 <body>
 
 <aside>
-    <div class="sidebar-header">
-        <h2>Institutions</h2>
+    <div style="padding-bottom: 15px; border-bottom: 1px solid var(--border); margin-bottom: 15px;">
+        <h2 style="font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">Institutions</h2>
     </div>
-    <div class="bank-list" id="bankList">
-        </div>
+    <div class="bank-list" id="bankList"></div>
 </aside>
 
 <main>
+    <div id="statusOverlay"></div>
     <div style="margin-bottom: 20px;">
-        <h1 style="font-size: 22px; margin: 0; font-weight: 700;">Rate Intelligence <span style="color:var(--primary); font-weight: 400; font-size: 14px; margin-left: 10px;">/ Performance Analytics</span></h1>
+        <h1 style="font-size: 22px; margin: 0;">Market Rate Intelligence</h1>
     </div>
 
     <div class="chart-container">
-        <button id="resetBtn" onclick="focusBank(null)">SHOW ALL BANKS</button>
         <div id="mainChart"></div>
     </div>
 </main>
@@ -154,85 +118,71 @@
 <script>
     let myChart = null;
     let masterData = null;
-    let selectedBank = null;
-    const COLORS = ['#38bdf8', '#10b981', '#fbbf24', '#f87171', '#818cf8', '#22d3ee', '#fb7185', '#c084fc', '#6366f1', '#a855f7', '#ec4899', '#14b8a6', '#f97316'];
+    const COLORS = ['#38bdf8', '#10b981', '#fbbf24', '#f87171', '#818cf8', '#22d3ee', '#fb7185', '#c084fc', '#6366f1'];
 
-    async function init() {
+    async function start() {
+        const status = document.getElementById('statusOverlay');
+        
         try {
+            // Attempt to fetch from the data folder
             const res = await fetch('./data/rates.json');
+            if (!res.ok) throw new Error("Rates file not found. Ensure npx serve is running.");
+            
             masterData = await res.json();
             const banks = Object.keys(masterData[0]).filter(k => k !== 'date');
-            
-            setupSidebar(banks);
-            
+
+            // Initialize Sidebar
+            const list = document.getElementById('bankList');
+            list.innerHTML = banks.map((b, i) => `
+                <div class="bank-item" id="item-${b}" onclick="focusBank('${b}')">
+                    <div class="color-dot" style="background-color: ${COLORS[i % COLORS.length]}"></div>
+                    <span>${b.replace(/_/g, ' ')}</span>
+                </div>
+            `).join('');
+
+            // Initialize Chart
             myChart = echarts.init(document.getElementById('mainChart'));
             renderChart(null);
             
             window.addEventListener('resize', () => myChart.resize());
-        } catch (e) { console.error("Initialization Failed", e); }
-    }
 
-    function setupSidebar(banks) {
-        const container = document.getElementById('bankList');
-        container.innerHTML = banks.map((b, i) => `
-            <div class="bank-item" id="item-${b}" onclick="focusBank('${b}')">
-                <div class="color-dot" style="background-color: ${COLORS[i % COLORS.length]}"></div>
-                <span>${b.replace(/_/g, ' ')}</span>
-            </div>
-        `).join('');
-    }
-
-    function focusBank(bankName) {
-        selectedBank = bankName;
-        // Sidebar UI updates
-        document.querySelectorAll('.bank-item').forEach(el => el.classList.remove('active'));
-        if(bankName) {
-            document.getElementById(`item-${bankName}`).classList.add('active');
-            document.getElementById('resetBtn').style.display = 'block';
-        } else {
-            document.getElementById('resetBtn').style.display = 'none';
+        } catch (e) {
+            status.style.display = 'block';
+            status.style.background = '#fef2f2';
+            status.style.color = '#991b1b';
+            status.innerHTML = `<strong>Error:</strong> ${e.message}`;
         }
-        renderChart(bankName);
+    }
+
+    function focusBank(name) {
+        document.querySelectorAll('.bank-item').forEach(el => el.classList.remove('active'));
+        if (name) document.getElementById(`item-${name}`).classList.add('active');
+        renderChart(name);
     }
 
     function renderChart(focusName) {
         const banks = Object.keys(masterData[0]).filter(k => k !== 'date');
-        
         const option = {
             backgroundColor: 'transparent',
             tooltip: {
                 trigger: 'axis',
                 backgroundColor: '#1e293b',
                 borderColor: '#334155',
-                borderWidth: 1,
-                textStyle: { color: '#f8fafc', fontSize: 12 },
-                order: 'seriesDesc',
-                valueFormatter: (v) => v ? v.toFixed(2) + '%' : '—'
+                textStyle: { color: '#f8fafc' },
+                order: 'seriesDesc'
             },
-            grid: { top: 30, left: 10, right: 20, bottom: 60, containLabel: true },
+            grid: { top: 30, left: 10, right: 10, bottom: 60, containLabel: true },
             dataZoom: [{ 
                 type: 'slider', 
                 bottom: 0, 
-                height: 35, 
+                height: 30, 
                 borderColor: 'transparent',
                 backgroundColor: '#0f172a',
-                fillerColor: 'rgba(56, 189, 248, 0.1)',
                 handleStyle: { color: '#38bdf8' },
-                textStyle: { color: '#94a3b8' },
-                moveHandleSize: 0,
-                brushSelect: false
-            }, { type: 'inside' }],
-            xAxis: { 
-                type: 'time', 
-                axisLine: { lineStyle: { color: '#334155' } },
-                splitLine: { show: false }
-            },
-            yAxis: { 
-                type: 'value', 
-                min: 'dataMin', 
-                axisLabel: { color: '#94a3b8' },
-                splitLine: { lineStyle: { color: '#334155', type: 'dashed' } } 
-            },
+                textStyle: { color: '#94a3b8' }
+            }],
+            xAxis: { type: 'time', axisLine: { lineStyle: { color: '#334155' } } },
+            yAxis: { type: 'value', min: 'dataMin', splitLine: { lineStyle: { color: '#334155', type: 'dashed' } } },
             series: banks.map((name, i) => {
                 const isFocused = !focusName || name === focusName;
                 return {
@@ -251,12 +201,11 @@
                 };
             })
         };
-
-        // Forces the chart to clear old state and redraw (notMerge: true)
         myChart.setOption(option, true);
     }
 
-    init();
+    // Run the application
+    start();
 </script>
 </body>
 </html>
