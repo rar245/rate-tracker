@@ -3,98 +3,119 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rate Tracker Pro | Auto-Fit View</title>
+    <title>Rate Tracker Pro | Fixed Layout</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.0/echarts.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
     <style>
-        :root { --bg: #0f172a; --surface: #1e293b; --primary: #38bdf8; --accent: #10b981; --text: #f8fafc; --text-muted: #94a3b8; --border: #334155; }
-        
-        /* Fixed height body to prevent page scrolling */
-        body { 
-            font-family: 'Inter', sans-serif; 
-            background-color: var(--bg); 
-            color: var(--text); 
-            margin: 0; 
-            display: flex; 
-            height: 100vh; 
-            width: 100vw;
-            overflow: hidden; 
+        :root { 
+            --bg: #0f172a; 
+            --surface: #1e293b; 
+            --primary: #38bdf8; 
+            --accent: #10b981; 
+            --text: #f8fafc; 
+            --text-muted: #94a3b8; 
+            --border: #334155; 
         }
         
+        body, html { 
+            margin: 0; 
+            padding: 0; 
+            height: 100vh; 
+            width: 100vw; 
+            overflow: hidden; /* Hard lock on scrolling */
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .app-wrapper {
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /* Sidebar: Legend */
         aside { 
-            width: 260px; 
-            min-width: 260px; 
+            width: 240px; 
+            min-width: 240px; 
             background: var(--surface); 
             border-right: 1px solid var(--border); 
             display: flex; 
             flex-direction: column; 
-            padding: 20px; 
+            padding: 15px;
             box-sizing: border-box;
         }
 
-        .bank-list { overflow-y: auto; flex-grow: 1; }
-        .bank-item { padding: 8px 12px; border-radius: 6px; margin-bottom: 4px; cursor: pointer; display: flex; align-items: center; font-size: 13px; color: var(--text-muted); }
+        .bank-list { overflow-y: auto; flex-grow: 1; padding-right: 5px; }
+        .bank-item { padding: 8px; border-radius: 6px; margin-bottom: 4px; cursor: pointer; display: flex; align-items: center; font-size: 12px; color: var(--text-muted); }
         .bank-item.active { background: rgba(56, 189, 248, 0.1); color: var(--text); font-weight: 600; border: 1px solid var(--primary); }
         .color-dot { width: 8px; height: 8px; border-radius: 50%; margin-right: 10px; opacity: 0.2; }
         .active .color-dot { opacity: 1; }
 
-        /* Main area uses Flex Column to fit perfectly */
+        /* Main Workspace */
         main { 
             flex: 1; 
             display: flex; 
             flex-direction: column; 
-            padding: 20px; 
-            overflow: hidden; 
+            padding: 15px; 
             box-sizing: border-box;
+            gap: 15px;
         }
 
+        /* Fixed Header Heights */
+        .header-section { flex-shrink: 0; }
         .kpi-row { 
             display: grid; 
             grid-template-columns: repeat(3, 1fr); 
-            gap: 15px; 
-            margin-bottom: 20px; 
-            flex-shrink: 0; /* Prevents headers from squishing */
+            gap: 12px; 
+            flex-shrink: 0; 
         }
 
-        .stat-card { background: var(--surface); padding: 15px; border-radius: 12px; border: 1px solid var(--border); }
-        .stat-value { font-family: 'JetBrains Mono', monospace; font-size: 22px; font-weight: 700; color: var(--accent); }
-        
-        /* The Chart Box now grows to fill only the REMAINING space */
+        .stat-card { background: var(--surface); padding: 12px; border-radius: 10px; border: 1px solid var(--border); }
+        .stat-value { font-family: 'JetBrains Mono', monospace; font-size: 20px; font-weight: 700; color: var(--accent); }
+        .stat-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px; }
+
+        /* CHART CONTAINER: The Magic Fix */
         .chart-box { 
             background: var(--surface); 
-            border-radius: 16px; 
+            border-radius: 12px; 
             border: 1px solid var(--border); 
-            padding: 15px; 
-            flex: 1; 
-            min-height: 0; /* Critical fix for Flexbox overflow */
-            display: flex; 
-            flex-direction: column; 
+            padding: 10px; 
+            /* This calculation ensures the chart box fits the viewport perfectly */
+            height: calc(100vh - 160px); 
+            position: relative;
+            box-sizing: border-box;
         }
         
-        #mainChart { flex: 1; width: 100%; }
-        #errorLog { display: none; background: #450a0a; color: #fecaca; padding: 10px; border-radius: 8px; margin-bottom: 10px; font-size: 12px; }
+        #mainChart { height: 100%; width: 100%; }
     </style>
 </head>
 <body>
 
-<aside>
-    <div style="margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid var(--border);">
-        <h2 style="font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; margin: 0;">Institutions</h2>
-        <div style="display:flex; gap:5px; margin-top:10px;">
-            <button onclick="toggleAll(true)" style="flex:1; font-size:9px; padding:5px; cursor:pointer; background:#334155; color:white; border:none; border-radius:4px;">ALL</button>
-            <button onclick="toggleAll(false)" style="flex:1; font-size:9px; padding:5px; cursor:pointer; background:#334155; color:white; border:none; border-radius:4px;">NONE</button>
+<div class="app-wrapper">
+    <aside>
+        <div style="margin-bottom: 15px; border-bottom: 1px solid var(--border); padding-bottom: 10px;">
+            <h2 style="font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; margin: 0;">Institutions</h2>
+            <div style="display:flex; gap:5px; margin-top:10px;">
+                <button onclick="toggleAll(true)" style="flex:1; font-size:9px; padding:4px; cursor:pointer; background:#334155; color:white; border:none; border-radius:3px;">ALL</button>
+                <button onclick="toggleAll(false)" style="flex:1; font-size:9px; padding:4px; cursor:pointer; background:#334155; color:white; border:none; border-radius:3px;">NONE</button>
+            </div>
         </div>
-    </div>
-    <div class="bank-list" id="bankList"></div>
-</aside>
+        <div class="bank-list" id="bankList"></div>
+    </aside>
 
-<main>
-    <div id="errorLog"></div>
-    <div class="kpi-row" id="kpiRow"></div>
-    <div class="chart-box">
-        <div id="mainChart"></div>
-    </div>
-</main>
+    <main>
+        <div class="header-section">
+            <h1 style="font-size: 18px; margin: 0; font-weight: 700;">Rate Intelligence <span style="color:var(--primary); font-weight: 400;">v2.0</span></h1>
+        </div>
+
+        <div class="kpi-row" id="kpiRow"></div>
+
+        <div class="chart-box">
+            <div id="mainChart"></div>
+        </div>
+    </main>
+</div>
 
 <script>
     const COLORS = ['#38bdf8', '#10b981', '#fbbf24', '#f87171', '#818cf8', '#22d3ee', '#fb7185', '#c084fc', '#6366f1'];
@@ -103,11 +124,10 @@
     async function run() {
         try {
             const res = await fetch('./data/rates.json');
-            if (!res.ok) throw new Error("Check npx serve / rates.json location.");
             masterData = await res.json();
             const banks = Object.keys(masterData[0]).filter(k => k !== 'date');
             
-            // Default select Leader
+            // Auto-select Leader
             const last = masterData[masterData.length - 1];
             let leader = banks[0];
             banks.forEach(b => { if(last[b] > last[leader]) leader = b; });
@@ -117,11 +137,7 @@
             updateAll();
             
             window.addEventListener('resize', () => myChart && myChart.resize());
-        } catch (e) {
-            const log = document.getElementById('errorLog');
-            log.style.display = 'block';
-            log.innerHTML = `Error: ${e.message}`;
-        }
+        } catch (e) { console.error(e); }
     }
 
     function updateAll() {
@@ -141,9 +157,9 @@
             if (r > 0) { sum += r; count++; }
         });
         document.getElementById('kpiRow').innerHTML = `
-            <div class="stat-card"><div style="font-size:10px; color:var(--text-muted)">LEADER</div><div class="stat-value">${leader.rate.toFixed(2)}%</div><div style="font-size:10px">${leader.name}</div></div>
-            <div class="stat-card"><div style="font-size:10px; color:var(--text-muted)">AVG APY</div><div class="stat-value">${(sum/count).toFixed(2)}%</div><div style="font-size:10px">Market</div></div>
-            <div class="stat-card"><div style="font-size:10px; color:var(--text-muted)">LATEST</div><div class="stat-value" style="font-size:18px">${last.date}</div><div style="font-size:10px">Verified</div></div>`;
+            <div class="stat-card"><div class="stat-label">Market Leader</div><div class="stat-value">${leader.rate.toFixed(2)}%</div><div style="font-size:9px">${leader.name}</div></div>
+            <div class="stat-card"><div class="stat-label">Average APY</div><div class="stat-value">${(sum/count).toFixed(2)}%</div><div style="font-size:9px">Current Mean</div></div>
+            <div class="stat-card"><div class="stat-label">Last Snapshot</div><div class="stat-value" style="font-size:16px">${last.date}</div><div style="font-size:9px">Verified</div></div>`;
     }
 
     function renderSidebar(banks) {
@@ -171,27 +187,24 @@
                 trigger: 'axis',
                 backgroundColor: 'rgba(30, 41, 59, 0.95)',
                 borderColor: '#334155',
-                textStyle: { color: '#f8fafc', fontSize: 12 },
+                textStyle: { color: '#f8fafc', fontSize: 11 },
                 formatter: (params) => {
                     let res = `<div style="border-bottom:1px solid #444;margin-bottom:5px"><b>${params[0].axisValueLabel}</b></div>`;
                     params.filter(p => p.value[1] !== null).forEach(p => {
-                        res += `<div style="display:flex;justify-content:space-between;gap:20px;">
-                                <span>${p.marker}${p.seriesName}</span>
-                                <b style="color:#38bdf8">${p.value[1].toFixed(2)}%</b></div>`;
+                        res += `<div style="display:flex;justify-content:space-between;gap:15px;"><span>${p.marker}${p.seriesName}</span><b>${p.value[1].toFixed(2)}%</b></div>`;
                     });
                     return res;
                 }
             },
-            grid: { top: 20, left: 10, right: 10, bottom: 80, containLabel: true },
+            grid: { top: 15, left: 10, right: 10, bottom: 65, containLabel: true },
             dataZoom: [{ 
-                type: 'slider', bottom: 10, height: 30, 
+                type: 'slider', bottom: 10, height: 25, 
                 borderColor: 'transparent', backgroundColor: '#0f172a',
-                fillerColor: 'rgba(56, 189, 248, 0.1)',
                 handleStyle: { color: '#38bdf8' }, textStyle: { color: '#94a3b8' },
                 start: 80, end: 100
-            }, { type: 'inside' }],
+            }],
             xAxis: { type: 'time', axisLine: { lineStyle: { color: '#334155' } } },
-            yAxis: { type: 'value', min: 'dataMin', axisLabel: { formatter: '{value}%', color: '#94a3b8' }, splitLine: { lineStyle: { color: '#334155', type: 'dashed' } } },
+            yAxis: { type: 'value', min: 'dataMin', axisLabel: { formatter: '{value}%', color: '#94a3b8', fontSize: 10 }, splitLine: { lineStyle: { color: '#334155', type: 'dashed' } } },
             series: banks.map((name, i) => {
                 const sel = selectedBanks.has(name);
                 return {
