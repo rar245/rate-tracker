@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Rate Tracker | Recovery Build</title>
+    <title>Rate Tracker | Cloud-Sync Build</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.0/echarts.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
     <style>
@@ -12,7 +12,7 @@
         .app-container { display: flex; height: 100vh; width: 100vw; }
         aside { width: 240px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; }
         .bank-list { overflow-y: auto; flex: 1; padding: 15px; }
-        .bank-item { padding: 8px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; font-size: 12px; margin-bottom: 4px; border: 1px solid transparent; }
+        .bank-item { padding: 8px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; font-size: 12px; margin-bottom: 4px; border: 1px solid transparent; transition: 0.2s; }
         .bank-item.active { background: rgba(56, 189, 248, 0.1); border-color: var(--primary); font-weight: 600; color: var(--primary); }
         .color-dot { width: 8px; height: 8px; border-radius: 50%; margin-right: 10px; opacity: 0.2; }
         .active .color-dot { opacity: 1; box-shadow: 0 0 8px currentColor; }
@@ -23,20 +23,20 @@
         .kpi-val { font-family: 'JetBrains Mono', monospace; font-size: 20px; color: #10b981; font-weight: 700; }
         .chart-section { flex: 1; margin: 0 20px 20px 20px; background: var(--surface); border-radius: 12px; border: 1px solid var(--border); position: relative; min-height: 0; }
         #mainChart { height: 100%; width: 100%; }
-        #errorOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; background: #450a0a; color: white; padding: 10px; z-index: 9999; text-align: center; font-size: 12px; }
+        #loader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 10000; }
     </style>
 </head>
 <body>
 
-<div id="errorOverlay"></div>
+<div id="loader">Initializing Rate Intelligence...</div>
 
 <div class="app-container">
     <aside>
         <div style="padding: 20px; border-bottom: 1px solid var(--border);">
             <h2 style="font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: #94a3b8; margin:0;">Institutions</h2>
             <div style="display:flex; gap:5px; margin-top:10px;">
-                <button onclick="toggleAll(true)" style="flex:1; font-size:9px; padding:5px; cursor:pointer;">ALL</button>
-                <button onclick="toggleAll(false)" style="flex:1; font-size:9px; padding:5px; cursor:pointer;">NONE</button>
+                <button onclick="toggleAll(true)" style="flex:1; font-size:9px; padding:5px; cursor:pointer; background:#334155; color:white; border:none; border-radius:4px;">ALL</button>
+                <button onclick="toggleAll(false)" style="flex:1; font-size:9px; padding:5px; cursor:pointer; background:#334155; color:white; border:none; border-radius:4px;">NONE</button>
             </div>
         </div>
         <div class="bank-list" id="bankList"></div>
@@ -55,13 +55,15 @@
 
 <script>
     const COLORS = ['#38bdf8', '#10b981', '#fbbf24', '#f87171', '#818cf8', '#22d3ee', '#fb7185', '#c084fc', '#6366f1'];
+    // USING YOUR GITHUB RAW URL TO BYPASS LOCAL PATH ISSUES
+    const DATA_URL = 'https://raw.githubusercontent.com/rar245/rate-tracker/main/data/rates.json';
+    
     let myChart, masterData, selectedBanks = new Set();
 
     async function init() {
-        const errorBox = document.getElementById('errorOverlay');
         try {
-            const res = await fetch('./data/rates.json');
-            if (!res.ok) throw new Error("Could not load rates.json. Check 'npx serve' folder.");
+            const res = await fetch(DATA_URL);
+            if (!res.ok) throw new Error("Failed to reach GitHub Data.");
             
             masterData = await res.json();
             const banks = Object.keys(masterData[0]).filter(k => k !== 'date');
@@ -71,21 +73,21 @@
             banks.forEach(b => { if(last[b] > last[leader]) leader = b; });
             selectedBanks.add(leader);
 
-            const chartDom = document.getElementById('mainChart');
-            if (!chartDom) throw new Error("Chart container not found.");
+            myChart = echarts.init(document.getElementById('mainChart'));
             
-            myChart = echarts.init(chartDom);
-            
+            // Re-enabling the clickable lines feature
             myChart.on('click', (params) => {
                 if (params.componentType === 'series') toggleBank(params.seriesName);
             });
 
             update();
+            document.getElementById('loader').style.display = 'none';
             window.addEventListener('resize', () => myChart.resize());
         } catch (e) {
-            errorBox.style.display = 'block';
-            errorBox.textContent = "CRITICAL ERROR: " + e.message;
-            console.error(e);
+            document.getElementById('loader').innerHTML = `<div style="color:#f87171; text-align:center;">
+                <strong>LOAD ERROR:</strong><br>${e.message}<br><br>
+                Check your internet connection or GitHub repo status.
+            </div>`;
         }
     }
 
@@ -171,8 +173,8 @@
         myChart.setOption(option, true);
     }
 
-    // Use DOMContentLoaded to ensure the browser is ready
-    document.addEventListener('DOMContentLoaded', init);
+    // FIRE THE SCRIPT
+    init();
 </script>
 </body>
 </html>
