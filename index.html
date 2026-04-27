@@ -2,116 +2,100 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rate Tracker Pro | Fixed Layout</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Rate Tracker | Final Stability Build</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.0/echarts.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
     <style>
-        :root { 
-            --bg: #0f172a; 
-            --surface: #1e293b; 
-            --primary: #38bdf8; 
-            --accent: #10b981; 
-            --text: #f8fafc; 
-            --text-muted: #94a3b8; 
-            --border: #334155; 
-        }
+        :root { --bg: #0f172a; --surface: #1e293b; --primary: #38bdf8; --text: #f8fafc; --border: #334155; }
         
-        body, html { 
+        /* 1. FORCE THE VIEWPORT */
+        html, body { 
+            height: 100%; 
             margin: 0; 
             padding: 0; 
-            height: 100vh; 
-            width: 100vw; 
-            overflow: hidden; /* Hard lock on scrolling */
+            overflow: hidden; /* No page scrolling allowed */
             background-color: var(--bg);
             color: var(--text);
             font-family: 'Inter', sans-serif;
         }
-        
-        .app-wrapper {
+
+        .app-container {
             display: flex;
-            height: 100vh;
+            height: 100vh; /* Exactly 100% of the visible window */
             width: 100vw;
         }
 
-        /* Sidebar: Legend */
+        /* 2. SIDEBAR */
         aside { 
             width: 240px; 
-            min-width: 240px; 
             background: var(--surface); 
             border-right: 1px solid var(--border); 
             display: flex; 
             flex-direction: column; 
-            padding: 15px;
-            box-sizing: border-box;
+            flex-shrink: 0; /* Sidebar NEVER shrinks */
         }
 
-        .bank-list { overflow-y: auto; flex-grow: 1; padding-right: 5px; }
-        .bank-item { padding: 8px; border-radius: 6px; margin-bottom: 4px; cursor: pointer; display: flex; align-items: center; font-size: 12px; color: var(--text-muted); }
-        .bank-item.active { background: rgba(56, 189, 248, 0.1); color: var(--text); font-weight: 600; border: 1px solid var(--primary); }
+        .bank-list { overflow-y: auto; flex: 1; padding: 15px; }
+        .bank-item { padding: 8px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; font-size: 12px; margin-bottom: 4px; border: 1px solid transparent; }
+        .bank-item.active { background: rgba(56, 189, 248, 0.1); border-color: var(--primary); font-weight: 600; }
         .color-dot { width: 8px; height: 8px; border-radius: 50%; margin-right: 10px; opacity: 0.2; }
         .active .color-dot { opacity: 1; }
 
-        /* Main Workspace */
+        /* 3. MAIN CONTENT (THE SANDWICH) */
         main { 
             flex: 1; 
             display: flex; 
-            flex-direction: column; 
-            padding: 15px; 
-            box-sizing: border-box;
-            gap: 15px;
+            flex-direction: column; /* Stack top to bottom */
+            height: 100%;
+            overflow: hidden;
         }
 
-        /* Fixed Header Heights */
-        .header-section { flex-shrink: 0; }
-        .kpi-row { 
-            display: grid; 
-            grid-template-columns: repeat(3, 1fr); 
-            gap: 12px; 
-            flex-shrink: 0; 
+        /* Top part of the sandwich (Fixed height) */
+        .top-section { 
+            padding: 20px; 
+            flex-shrink: 0; /* Header NEVER shrinks */
         }
 
-        .stat-card { background: var(--surface); padding: 12px; border-radius: 10px; border: 1px solid var(--border); }
-        .stat-value { font-family: 'JetBrains Mono', monospace; font-size: 20px; font-weight: 700; color: var(--accent); }
-        .stat-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px; }
+        .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 15px; }
+        .kpi-card { background: var(--surface); padding: 12px; border-radius: 10px; border: 1px solid var(--border); }
+        .kpi-val { font-family: 'JetBrains Mono', monospace; font-size: 20px; color: #10b981; font-weight: 700; }
 
-        /* CHART CONTAINER: The Magic Fix */
-        .chart-box { 
-            background: var(--surface); 
-            border-radius: 12px; 
-            border: 1px solid var(--border); 
-            padding: 10px; 
-            /* This calculation ensures the chart box fits the viewport perfectly */
-            height: calc(100vh - 160px); 
+        /* Bottom part of the sandwich (Grows to fill everything else) */
+        .chart-section { 
+            flex: 1; /* TAKE ALL REMAINING SPACE */
+            margin: 0 20px 20px 20px; 
+            background: var(--surface);
+            border-radius: 12px;
+            border: 1px solid var(--border);
             position: relative;
-            box-sizing: border-box;
+            min-height: 0; /* CSS trick to allow inner chart to fit */
         }
-        
+
         #mainChart { height: 100%; width: 100%; }
     </style>
 </head>
 <body>
 
-<div class="app-wrapper">
+<div class="app-container">
     <aside>
-        <div style="margin-bottom: 15px; border-bottom: 1px solid var(--border); padding-bottom: 10px;">
-            <h2 style="font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; margin: 0;">Institutions</h2>
+        <div style="padding: 20px; border-bottom: 1px solid var(--border);">
+            <h2 style="font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: #94a3b8; margin:0;">Banks</h2>
             <div style="display:flex; gap:5px; margin-top:10px;">
-                <button onclick="toggleAll(true)" style="flex:1; font-size:9px; padding:4px; cursor:pointer; background:#334155; color:white; border:none; border-radius:3px;">ALL</button>
-                <button onclick="toggleAll(false)" style="flex:1; font-size:9px; padding:4px; cursor:pointer; background:#334155; color:white; border:none; border-radius:3px;">NONE</button>
+                <button onclick="toggleAll(true)" style="flex:1; font-size:9px; padding:5px; cursor:pointer;">ALL</button>
+                <button onclick="toggleAll(false)" style="flex:1; font-size:9px; padding:5px; cursor:pointer;">NONE</button>
             </div>
         </div>
         <div class="bank-list" id="bankList"></div>
     </aside>
 
     <main>
-        <div class="header-section">
-            <h1 style="font-size: 18px; margin: 0; font-weight: 700;">Rate Intelligence <span style="color:var(--primary); font-weight: 400;">v2.0</span></h1>
+        <div class="top-section">
+            <h1 style="margin:0; font-size: 20px;">Rate Intelligence v2.0</h1>
+            <div class="kpi-grid" id="kpiRow"></div>
         </div>
 
-        <div class="kpi-row" id="kpiRow"></div>
-
-        <div class="chart-box">
+        <div class="chart-section">
             <div id="mainChart"></div>
         </div>
     </main>
@@ -121,26 +105,25 @@
     const COLORS = ['#38bdf8', '#10b981', '#fbbf24', '#f87171', '#818cf8', '#22d3ee', '#fb7185', '#c084fc', '#6366f1'];
     let myChart, masterData, selectedBanks = new Set();
 
-    async function run() {
+    async function init() {
         try {
             const res = await fetch('./data/rates.json');
             masterData = await res.json();
             const banks = Object.keys(masterData[0]).filter(k => k !== 'date');
             
-            // Auto-select Leader
+            // Start with Market Leader selected
             const last = masterData[masterData.length - 1];
             let leader = banks[0];
             banks.forEach(b => { if(last[b] > last[leader]) leader = b; });
             selectedBanks.add(leader);
 
             myChart = echarts.init(document.getElementById('mainChart'));
-            updateAll();
-            
-            window.addEventListener('resize', () => myChart && myChart.resize());
-        } catch (e) { console.error(e); }
+            update();
+            window.addEventListener('resize', () => myChart.resize());
+        } catch (e) { console.error("Init fail", e); }
     }
 
-    function updateAll() {
+    function update() {
         const banks = Object.keys(masterData[0]).filter(k => k !== 'date');
         renderKPIs();
         renderSidebar(banks);
@@ -157,67 +140,12 @@
             if (r > 0) { sum += r; count++; }
         });
         document.getElementById('kpiRow').innerHTML = `
-            <div class="stat-card"><div class="stat-label">Market Leader</div><div class="stat-value">${leader.rate.toFixed(2)}%</div><div style="font-size:9px">${leader.name}</div></div>
-            <div class="stat-card"><div class="stat-label">Average APY</div><div class="stat-value">${(sum/count).toFixed(2)}%</div><div style="font-size:9px">Current Mean</div></div>
-            <div class="stat-card"><div class="stat-label">Last Snapshot</div><div class="stat-value" style="font-size:16px">${last.date}</div><div style="font-size:9px">Verified</div></div>`;
+            <div class="kpi-card"><div style="font-size:9px; color:#94a3b8">LEADER</div><div class="kpi-val">${leader.rate.toFixed(2)}%</div><div style="font-size:9px">${leader.name}</div></div>
+            <div class="kpi-card"><div style="font-size:9px; color:#94a3b8">AVG APY</div><div class="kpi-val">${(sum/count).toFixed(2)}%</div><div style="font-size:9px">Current</div></div>
+            <div class="kpi-card"><div style="font-size:9px; color:#94a3b8">SNAPSHOT</div><div class="kpi-val" style="font-size:16px">${last.date}</div><div style="font-size:9px">Verified</div></div>`;
     }
 
     function renderSidebar(banks) {
         document.getElementById('bankList').innerHTML = banks.map((b, i) => `
             <div class="bank-item ${selectedBanks.has(b) ? 'active' : ''}" onclick="toggleBank('${b}')">
-                <div class="color-dot" style="background-color: ${COLORS[i % COLORS.length]}"></div>
-                <span>${b}</span>
-            </div>`).join('');
-    }
-
-    function toggleBank(name) {
-        selectedBanks.has(name) ? selectedBanks.delete(name) : selectedBanks.add(name);
-        updateAll();
-    }
-
-    function toggleAll(show) {
-        selectedBanks = show ? new Set(Object.keys(masterData[0]).filter(k => k !== 'date')) : new Set();
-        updateAll();
-    }
-
-    function renderChart(banks) {
-        const option = {
-            backgroundColor: 'transparent',
-            tooltip: {
-                trigger: 'axis',
-                backgroundColor: 'rgba(30, 41, 59, 0.95)',
-                borderColor: '#334155',
-                textStyle: { color: '#f8fafc', fontSize: 11 },
-                formatter: (params) => {
-                    let res = `<div style="border-bottom:1px solid #444;margin-bottom:5px"><b>${params[0].axisValueLabel}</b></div>`;
-                    params.filter(p => p.value[1] !== null).forEach(p => {
-                        res += `<div style="display:flex;justify-content:space-between;gap:15px;"><span>${p.marker}${p.seriesName}</span><b>${p.value[1].toFixed(2)}%</b></div>`;
-                    });
-                    return res;
-                }
-            },
-            grid: { top: 15, left: 10, right: 10, bottom: 65, containLabel: true },
-            dataZoom: [{ 
-                type: 'slider', bottom: 10, height: 25, 
-                borderColor: 'transparent', backgroundColor: '#0f172a',
-                handleStyle: { color: '#38bdf8' }, textStyle: { color: '#94a3b8' },
-                start: 80, end: 100
-            }],
-            xAxis: { type: 'time', axisLine: { lineStyle: { color: '#334155' } } },
-            yAxis: { type: 'value', min: 'dataMin', axisLabel: { formatter: '{value}%', color: '#94a3b8', fontSize: 10 }, splitLine: { lineStyle: { color: '#334155', type: 'dashed' } } },
-            series: banks.map((name, i) => {
-                const sel = selectedBanks.has(name);
-                return {
-                    name, type: 'line', step: 'end', symbol: 'none', connectNulls: true, z: sel ? 10 : 1,
-                    lineStyle: { color: sel ? COLORS[i % COLORS.length] : '#1e293b', width: sel ? 3 : 1, opacity: sel ? 1 : 0.05 },
-                    data: masterData.map(d => [d.date, d[name]])
-                };
-            })
-        };
-        myChart.setOption(option, true);
-    }
-
-    run();
-</script>
-</body>
-</html>
+                <div class="color-dot" style="background-
