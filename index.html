@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rate Tracker Pro | Unified View</title>
+    <title>Rate Tracker Pro | Multi-Select</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.0/echarts.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
@@ -16,20 +16,11 @@
             --border: #334155;
         }
 
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg);
-            color: var(--text);
-            margin: 0;
-            display: flex;
-            height: 100vh;
-            overflow: hidden;
-        }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg); color: var(--text); margin: 0; display: flex; height: 100vh; overflow: hidden; }
 
-        /* Sidebar Legend */
         aside {
-            width: 260px;
-            min-width: 260px;
+            width: 280px;
+            min-width: 280px;
             background: var(--surface);
             border-right: 1px solid var(--border);
             display: flex;
@@ -37,10 +28,28 @@
             padding: 20px;
         }
 
-        .bank-list {
-            overflow-y: auto;
-            flex-grow: 1;
+        .sidebar-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border);
         }
+
+        .btn-sm {
+            flex: 1;
+            padding: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            background: #334155;
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .btn-sm:hover { background: #475569; }
+
+        .bank-list { overflow-y: auto; flex-grow: 1; }
 
         .bank-item {
             padding: 10px 12px;
@@ -52,64 +61,41 @@
             align-items: center;
             font-size: 13px;
             color: var(--text-muted);
+            border: 1px solid transparent;
         }
 
-        .bank-item:hover { background: #334155; color: var(--text); }
+        .bank-item:hover { background: #334155; }
         .bank-item.active { 
             background: rgba(56, 189, 248, 0.1); 
             border-color: var(--primary);
-            color: var(--primary);
-            font-weight: 600;
+            color: var(--text);
         }
 
-        .color-dot { width: 8px; height: 8px; border-radius: 50%; margin-right: 10px; }
+        .color-dot { width: 10px; height: 10px; border-radius: 50%; margin-right: 12px; opacity: 0.3; }
+        .active .color-dot { opacity: 1; border: 1px solid white; }
 
-        /* Main View */
-        main {
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-            padding: 24px;
-            position: relative;
-        }
-
-        .chart-container {
-            background: var(--surface);
-            border-radius: 12px;
-            border: 1px solid var(--border);
-            padding: 20px;
-            flex-grow: 1;
-        }
-
-        #mainChart { width: 100%; height: 100%; min-height: 400px; }
-
-        #statusOverlay {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-size: 12px;
-            display: none;
-            z-index: 1000;
-        }
+        main { flex-grow: 1; display: flex; flex-direction: column; padding: 24px; position: relative; }
+        .chart-container { background: var(--surface); border-radius: 12px; border: 1px solid var(--border); padding: 20px; flex-grow: 1; }
+        #mainChart { width: 100%; height: 100%; }
     </style>
 </head>
 <body>
 
 <aside>
-    <div style="padding-bottom: 15px; border-bottom: 1px solid var(--border); margin-bottom: 15px;">
-        <h2 style="font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">Institutions</h2>
+    <div style="margin-bottom: 15px;">
+        <h2 style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px;">Institutions</h2>
+    </div>
+    <div class="sidebar-controls">
+        <button class="btn-sm" onclick="toggleAll(true)">SELECT ALL</button>
+        <button class="btn-sm" onclick="toggleAll(false)">CLEAR ALL</button>
     </div>
     <div class="bank-list" id="bankList"></div>
 </aside>
 
 <main>
-    <div id="statusOverlay"></div>
     <div style="margin-bottom: 20px;">
         <h1 style="font-size: 22px; margin: 0;">Market Rate Intelligence</h1>
     </div>
-
     <div class="chart-container">
         <div id="mainChart"></div>
     </div>
@@ -118,49 +104,61 @@
 <script>
     let myChart = null;
     let masterData = null;
+    let selectedBanks = new Set();
     const COLORS = ['#38bdf8', '#10b981', '#fbbf24', '#f87171', '#818cf8', '#22d3ee', '#fb7185', '#c084fc', '#6366f1'];
 
     async function start() {
-        const status = document.getElementById('statusOverlay');
-        
         try {
-            // Attempt to fetch from the data folder
             const res = await fetch('./data/rates.json');
-            if (!res.ok) throw new Error("Rates file not found. Ensure npx serve is running.");
-            
             masterData = await res.json();
             const banks = Object.keys(masterData[0]).filter(k => k !== 'date');
 
-            // Initialize Sidebar
-            const list = document.getElementById('bankList');
-            list.innerHTML = banks.map((b, i) => `
-                <div class="bank-item" id="item-${b}" onclick="focusBank('${b}')">
-                    <div class="color-dot" style="background-color: ${COLORS[i % COLORS.length]}"></div>
-                    <span>${b.replace(/_/g, ' ')}</span>
-                </div>
-            `).join('');
+            // Find Market Leader to start with
+            const lastEntry = masterData[masterData.length - 1];
+            let leader = banks[0];
+            banks.forEach(b => { if(lastEntry[b] > lastEntry[leader]) leader = b; });
+            selectedBanks.add(leader);
 
-            // Initialize Chart
             myChart = echarts.init(document.getElementById('mainChart'));
-            renderChart(null);
+            renderUI(banks);
+            renderChart();
             
             window.addEventListener('resize', () => myChart.resize());
+        } catch (e) { console.error("Load Error:", e); }
+    }
 
-        } catch (e) {
-            status.style.display = 'block';
-            status.style.background = '#fef2f2';
-            status.style.color = '#991b1b';
-            status.innerHTML = `<strong>Error:</strong> ${e.message}`;
+    function renderUI(banks) {
+        const list = document.getElementById('bankList');
+        list.innerHTML = banks.map((b, i) => `
+            <div class="bank-item ${selectedBanks.has(b) ? 'active' : ''}" id="item-${b}" onclick="toggleBank('${b}')">
+                <div class="color-dot" style="background-color: ${COLORS[i % COLORS.length]}"></div>
+                <span>${b.replace(/_/g, ' ')}</span>
+            </div>
+        `).join('');
+    }
+
+    function toggleBank(name) {
+        if (selectedBanks.has(name)) {
+            selectedBanks.delete(name);
+        } else {
+            selectedBanks.add(name);
         }
+        updateDisplay();
     }
 
-    function focusBank(name) {
-        document.querySelectorAll('.bank-item').forEach(el => el.classList.remove('active'));
-        if (name) document.getElementById(`item-${name}`).classList.add('active');
-        renderChart(name);
+    function toggleAll(showAll) {
+        const banks = Object.keys(masterData[0]).filter(k => k !== 'date');
+        selectedBanks = showAll ? new Set(banks) : new Set();
+        updateDisplay();
     }
 
-    function renderChart(focusName) {
+    function updateDisplay() {
+        const banks = Object.keys(masterData[0]).filter(k => k !== 'date');
+        renderUI(banks);
+        renderChart();
+    }
+
+    function renderChart() {
         const banks = Object.keys(masterData[0]).filter(k => k !== 'date');
         const option = {
             backgroundColor: 'transparent',
@@ -173,29 +171,25 @@
             },
             grid: { top: 30, left: 10, right: 10, bottom: 60, containLabel: true },
             dataZoom: [{ 
-                type: 'slider', 
-                bottom: 0, 
-                height: 30, 
-                borderColor: 'transparent',
-                backgroundColor: '#0f172a',
-                handleStyle: { color: '#38bdf8' },
-                textStyle: { color: '#94a3b8' }
+                type: 'slider', bottom: 0, height: 30, 
+                borderColor: 'transparent', backgroundColor: '#0f172a',
+                handleStyle: { color: '#38bdf8' }, textStyle: { color: '#94a3b8' }
             }],
             xAxis: { type: 'time', axisLine: { lineStyle: { color: '#334155' } } },
             yAxis: { type: 'value', min: 'dataMin', splitLine: { lineStyle: { color: '#334155', type: 'dashed' } } },
             series: banks.map((name, i) => {
-                const isFocused = !focusName || name === focusName;
+                const isSelected = selectedBanks.has(name);
                 return {
                     name: name,
                     type: 'line',
                     step: 'end',
                     symbol: 'none',
                     connectNulls: true,
-                    z: isFocused ? 10 : 1,
+                    z: isSelected ? 10 : 1,
                     lineStyle: {
-                        color: isFocused ? COLORS[i % COLORS.length] : '#1e293b',
-                        width: isFocused ? 3 : 1,
-                        opacity: isFocused ? 1 : 0.15
+                        color: isSelected ? COLORS[i % COLORS.length] : '#1e293b',
+                        width: isSelected ? 3 : 1,
+                        opacity: isSelected ? 1 : 0.05 // Almost invisible if not selected
                     },
                     data: masterData.map(d => [d.date, d[name]])
                 };
@@ -204,7 +198,6 @@
         myChart.setOption(option, true);
     }
 
-    // Run the application
     start();
 </script>
 </body>
