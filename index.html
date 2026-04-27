@@ -93,4 +93,157 @@
     let myChart = null;
     let masterData = null;
     let selectedBanks = new Set();
-    const COLORS = ['#38bdf8', '#10b981', '#fbbf24', '#f87171', '#818cf8', '#22d3
+    const COLORS = ['#38bdf8', '#10b981', '#fbbf24', '#f87171', '#818cf8', '#22d3ee', '#fb7185', '#c084fc', '#6366f1'];
+
+    async function init() {
+        try {
+            const res = await fetch('./data/rates.json');
+            masterData = await res.json();
+            const banks = Object.keys(masterData[0]).filter(k => k !== 'date');
+
+            // Default to Market Leader
+            const last = masterData[masterData.length - 1];
+            let leader = banks[0];
+            banks.forEach(b => { if(last[b] > last[leader]) leader = b; });
+            selectedBanks.add(leader);
+
+            myChart = echarts.init(document.getElementById('mainChart'));
+            updateDashboard(banks);
+            window.addEventListener('resize', () => myChart.resize());
+        } catch (e) { console.error(e); }
+    }
+
+    function updateDashboard(banks) {
+        renderKPIs(masterData);
+        renderSidebar(banks);
+        renderChart(banks);
+    }
+
+    function renderKPIs(data) {
+        const last = data[data.length - 1];
+        const banks = Object.keys(last).filter(k => k !== 'date');
+        let leader = { name: '', rate: 0 };
+        let sum = 0, count = 0;
+
+        banks.forEach(b => {
+            const rate = last[b];
+            if (rate > leader.rate) leader = { name: b, rate: rate };
+            if (rate > 0) { sum += rate; count++; }
+        });
+
+        document.getElementById('kpiRow').innerHTML = `
+            <div class="stat-card">
+                <div class="stat-label">Market Leader</div>
+                <div class="stat-value">${leader.rate.toFixed(2)}%</div>
+                <div class="stat-meta">${leader.name}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Average APY</div>
+                <div class="stat-value">${(sum / count).toFixed(2)}%</div>
+                <div class="stat-meta">Across Network</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Last Snapshot</div>
+                <div class="stat-value" style="font-size: 20px;">${last.date}</div>
+                <div class="stat-meta">Verified Node</div>
+            </div>
+        `;
+    }
+
+    function renderSidebar(banks) {
+        const container = document.getElementById('bankList');
+        container.innerHTML = banks.map((b, i) => `
+            <div class="bank-item ${selectedBanks.has(b) ? 'active' : ''}" onclick="toggleBank('${b}')">
+                <div class="color-dot" style="background-color: ${COLORS[i % COLORS.length]}"></div>
+                <span>${b}</span>
+            </div>
+        `).join('');
+    }
+
+    function toggleBank(name) {
+        if (selectedBanks.has(name)) selectedBanks.delete(name);
+        else selectedBanks.add(name);
+        updateDashboard(Object.keys(masterData[0]).filter(k => k !== 'date'));
+    }
+
+    function toggleAll(showAll) {
+        const banks = Object.keys(masterData[0]).filter(k => k !== 'date');
+        selectedBanks = showAll ? new Set(banks) : new Set();
+        updateDashboard(banks);
+    }
+
+    function renderChart(banks) {
+        const option = {
+            backgroundColor: 'transparent',
+            tooltip: {
+                trigger: 'axis',
+                backgroundColor: 'rgba(30, 41, 59, 0.95)',
+                borderColor: '#334155',
+                borderWidth: 1,
+                textStyle: { color: '#f8fafc', fontSize: 12 },
+                // --- CUSTOM FORMATTER TO HIDE NULLS ---
+                formatter: function (params) {
+                    let result = `<div style="font-weight:bold; margin-bottom:5px; border-bottom: 1px solid #444;">${params[0].axisValueLabel}</div>`;
+                    let hasData = false;
+                    params.forEach(item => {
+                        // Only show if value is not null and the bank is currently selected/highlighted
+                        if (item.value[1] !== null && item.value[1] !== undefined) {
+                            hasData = true;
+                            result += `
+                                <div style="display:flex; justify-content:space-between; gap:20px; margin: 2px 0;">
+                                    <span>${item.marker} ${item.seriesName}</span>
+                                    <span style="font-family:'JetBrains Mono'; font-weight:bold; color:#38bdf8">${item.value[1].toFixed(2)}%</span>
+                                </div>`;
+                        }
+                    });
+                    return hasData ? result : "No data for this date";
+                }
+            },
+            grid: { top: 30, left: 10, right: 20, bottom: 60, containLabel: true },
+            dataZoom: [{ 
+                type: 'slider', bottom: 0, height: 30, 
+                borderColor: 'transparent', backgroundColor: '#0f172a',
+                fillerColor: 'rgba(56, 189, 248, 0.1)',
+                handleStyle: { color: '#38bdf8' }, textStyle: { color: '#94a3b8' }
+            }],
+            xAxis: { 
+                type: 'time', 
+                axisLine: { lineStyle: { color: '#334155' } },
+                splitLine: { show: false }
+            },
+            yAxis: { 
+                type: 'value', 
+                min: 'dataMin', 
+                // --- ADDED % TO NUMERALS ---
+                axisLabel: { 
+                    formatter: '{value}%',
+                    color: '#94a3b8',
+                    fontFamily: 'JetBrains Mono'
+                },
+                splitLine: { lineStyle: { color: '#334155', type: 'dashed' } } 
+            },
+            series: banks.map((name, i) => {
+                const isSelected = selectedBanks.has(name);
+                return {
+                    name: name,
+                    type: 'line',
+                    step: 'end',
+                    symbol: 'none',
+                    connectNulls: true,
+                    z: isSelected ? 10 : 1,
+                    lineStyle: {
+                        color: isSelected ? COLORS[i % COLORS.length] : '#1e293b',
+                        width: isSelected ? 3 : 1,
+                        opacity: isSelected ? 1 : 0.05
+                    },
+                    data: masterData.map(d => [d.date, d[name]])
+                };
+            })
+        };
+        myChart.setOption(option, true);
+    }
+
+    init();
+</script>
+</body>
+</html>
