@@ -3,18 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Rate Tracker | Final Stability Build</title>
+    <title>Rate Tracker | Stability Build 2.1</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.0/echarts.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
     <style>
         :root { --bg: #0f172a; --surface: #1e293b; --primary: #38bdf8; --text: #f8fafc; --border: #334155; }
         
-        /* 1. FORCE THE VIEWPORT */
         html, body { 
             height: 100%; 
             margin: 0; 
             padding: 0; 
-            overflow: hidden; /* No page scrolling allowed */
+            overflow: hidden; 
             background-color: var(--bg);
             color: var(--text);
             font-family: 'Inter', sans-serif;
@@ -22,54 +21,46 @@
 
         .app-container {
             display: flex;
-            height: 100vh; /* Exactly 100% of the visible window */
+            height: 100vh;
             width: 100vw;
         }
 
-        /* 2. SIDEBAR */
         aside { 
             width: 240px; 
             background: var(--surface); 
             border-right: 1px solid var(--border); 
             display: flex; 
             flex-direction: column; 
-            flex-shrink: 0; /* Sidebar NEVER shrinks */
+            flex-shrink: 0; 
         }
 
         .bank-list { overflow-y: auto; flex: 1; padding: 15px; }
         .bank-item { padding: 8px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; font-size: 12px; margin-bottom: 4px; border: 1px solid transparent; }
-        .bank-item.active { background: rgba(56, 189, 248, 0.1); border-color: var(--primary); font-weight: 600; }
+        .bank-item.active { background: rgba(56, 189, 248, 0.1); border-color: var(--primary); font-weight: 600; color: var(--primary); }
         .color-dot { width: 8px; height: 8px; border-radius: 50%; margin-right: 10px; opacity: 0.2; }
-        .active .color-dot { opacity: 1; }
+        .active .color-dot { opacity: 1; box-shadow: 0 0 8px currentColor; }
 
-        /* 3. MAIN CONTENT (THE SANDWICH) */
         main { 
             flex: 1; 
             display: flex; 
-            flex-direction: column; /* Stack top to bottom */
+            flex-direction: column; 
             height: 100%;
             overflow: hidden;
         }
 
-        /* Top part of the sandwich (Fixed height) */
-        .top-section { 
-            padding: 20px; 
-            flex-shrink: 0; /* Header NEVER shrinks */
-        }
-
+        .top-section { padding: 20px; flex-shrink: 0; }
         .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 15px; }
         .kpi-card { background: var(--surface); padding: 12px; border-radius: 10px; border: 1px solid var(--border); }
         .kpi-val { font-family: 'JetBrains Mono', monospace; font-size: 20px; color: #10b981; font-weight: 700; }
 
-        /* Bottom part of the sandwich (Grows to fill everything else) */
         .chart-section { 
-            flex: 1; /* TAKE ALL REMAINING SPACE */
+            flex: 1; 
             margin: 0 20px 20px 20px; 
             background: var(--surface);
             border-radius: 12px;
             border: 1px solid var(--border);
             position: relative;
-            min-height: 0; /* CSS trick to allow inner chart to fit */
+            min-height: 0; 
         }
 
         #mainChart { height: 100%; width: 100%; }
@@ -82,8 +73,8 @@
         <div style="padding: 20px; border-bottom: 1px solid var(--border);">
             <h2 style="font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: #94a3b8; margin:0;">Banks</h2>
             <div style="display:flex; gap:5px; margin-top:10px;">
-                <button onclick="toggleAll(true)" style="flex:1; font-size:9px; padding:5px; cursor:pointer;">ALL</button>
-                <button onclick="toggleAll(false)" style="flex:1; font-size:9px; padding:5px; cursor:pointer;">NONE</button>
+                <button onclick="toggleAll(true)" style="flex:1; font-size:9px; padding:5px; cursor:pointer; background:#334155; color:white; border:none; border-radius:4px;">ALL</button>
+                <button onclick="toggleAll(false)" style="flex:1; font-size:9px; padding:5px; cursor:pointer; background:#334155; color:white; border:none; border-radius:4px;">NONE</button>
             </div>
         </div>
         <div class="bank-list" id="bankList"></div>
@@ -111,13 +102,20 @@
             masterData = await res.json();
             const banks = Object.keys(masterData[0]).filter(k => k !== 'date');
             
-            // Start with Market Leader selected
             const last = masterData[masterData.length - 1];
             let leader = banks[0];
             banks.forEach(b => { if(last[b] > last[leader]) leader = b; });
             selectedBanks.add(leader);
 
             myChart = echarts.init(document.getElementById('mainChart'));
+            
+            // Fix: Enable Line Clicks
+            myChart.on('click', (params) => {
+                if (params.componentType === 'series') {
+                    toggleBank(params.seriesName);
+                }
+            });
+
             update();
             window.addEventListener('resize', () => myChart.resize());
         } catch (e) { console.error("Init fail", e); }
@@ -142,7 +140,7 @@
         document.getElementById('kpiRow').innerHTML = `
             <div class="kpi-card"><div style="font-size:9px; color:#94a3b8">LEADER</div><div class="kpi-val">${leader.rate.toFixed(2)}%</div><div style="font-size:9px">${leader.name}</div></div>
             <div class="kpi-card"><div style="font-size:9px; color:#94a3b8">AVG APY</div><div class="kpi-val">${(sum/count).toFixed(2)}%</div><div style="font-size:9px">Current</div></div>
-            <div class="kpi-card"><div style="font-size:9px; color:#94a3b8">SNAPSHOT</div><div class="kpi-val" style="font-size:16px">${last.date}</div><div style="font-size:9px">Verified</div></div>`;
+            <div class="kpi-card"><div style="font-size:9px; color:#94a3b8">SNAPSHOT</div><div class="kpi-val" style="font-size:16px; color:#38bdf8;">${last.date}</div><div style="font-size:9px">Verified</div></div>`;
     }
 
     function renderSidebar(banks) {
@@ -173,30 +171,36 @@
                 formatter: (params) => {
                     let res = `<div style="border-bottom:1px solid #444;margin-bottom:5px"><b>${params[0].axisValueLabel}</b></div>`;
                     params.filter(p => p.value[1] !== null).forEach(p => {
-                        res += `<div style="display:flex;justify-content:space-between;gap:15px;"><span>${p.marker}${p.seriesName}</span><b>${p.value[1].toFixed(2)}%</b></div>`;
+                        const isSel = selectedBanks.has(p.seriesName);
+                        res += `<div style="display:flex;justify-content:space-between;gap:15px; opacity:${isSel ? 1 : 0.4}">
+                                    <span>${p.marker}${p.seriesName}</span>
+                                    <b style="color:${isSel ? '#38bdf8' : '#94a3b8'}">${p.value[1].toFixed(2)}%</b>
+                                </div>`;
                     });
                     return res;
                 }
             },
-            grid: { top: 20, left: 10, right: 10, bottom: 60, containLabel: true },
+            // Increased bottom padding to 80 to protect the slider
+            grid: { top: 30, left: 10, right: 10, bottom: 80, containLabel: true },
             dataZoom: [{ 
                 type: 'slider', 
-                bottom: 10, 
-                height: 30, 
+                bottom: 20, // Moved up to 20 from 10
+                height: 35, 
                 borderColor: 'transparent', 
                 backgroundColor: '#0f172a',
                 fillerColor: 'rgba(56, 189, 248, 0.1)',
                 handleStyle: { color: '#38bdf8' },
                 textStyle: { color: '#94a3b8' },
                 start: 80, end: 100
-            }],
+            }, { type: 'inside' }],
             xAxis: { type: 'time', axisLine: { lineStyle: { color: '#334155' } } },
             yAxis: { type: 'value', min: 'dataMin', axisLabel: { formatter: '{value}%', color: '#94a3b8' }, splitLine: { lineStyle: { color: '#334155', type: 'dashed' } } },
             series: banks.map((name, i) => {
                 const sel = selectedBanks.has(name);
                 return {
                     name, type: 'line', step: 'end', symbol: 'none', connectNulls: true, z: sel ? 10 : 1,
-                    lineStyle: { color: sel ? COLORS[i % COLORS.length] : '#1e293b', width: sel ? 3 : 1, opacity: sel ? 1 : 0.05 },
+                    // Slightly thicker inactive lines (1.5) for better click targets
+                    lineStyle: { color: sel ? COLORS[i % COLORS.length] : '#1e293b', width: sel ? 3 : 1.5, opacity: sel ? 1 : 0.08 },
                     data: masterData.map(d => [d.date, d[name]])
                 };
             })
