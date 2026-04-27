@@ -3,64 +3,58 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rate Tracker Pro | Multi-Select</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.0/echarts.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <title>Rate Tracker Pro | Intelligence Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg: #0f172a;
             --surface: #1e293b;
             --primary: #38bdf8;
+            --accent: #10b981;
             --text: #f8fafc;
             --text-muted: #94a3b8;
             --border: #334155;
         }
 
-        body { font-family: 'Inter', sans-serif; background-color: var(--bg); color: var(--text); margin: 0; display: flex; height: 100vh; overflow: hidden; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
 
+        /* Sidebar Legend Navigation */
         aside {
             width: 280px;
-            min-width: 280px;
             background: var(--surface);
             border-right: 1px solid var(--border);
             display: flex;
             flex-direction: column;
-            padding: 20px;
+            padding: 24px;
         }
 
-        .sidebar-controls {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid var(--border);
-        }
+        .sidebar-header { margin-bottom: 24px; }
+        .sidebar-header h2 { font-size: 14px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
 
-        .btn-sm {
-            flex: 1;
-            padding: 6px;
-            font-size: 11px;
-            font-weight: 700;
-            background: #334155;
-            color: var(--text);
-            border: 1px solid var(--border);
-            border-radius: 4px;
-            cursor: pointer;
+        .bank-list {
+            overflow-y: auto;
+            flex-grow: 1;
         }
-        .btn-sm:hover { background: #475569; }
-
-        .bank-list { overflow-y: auto; flex-grow: 1; }
 
         .bank-item {
             padding: 10px 12px;
-            border-radius: 6px;
+            border-radius: 8px;
             margin-bottom: 4px;
             cursor: pointer;
-            transition: 0.2s;
+            transition: all 0.2s;
             display: flex;
+            justify-content: space-between;
             align-items: center;
             font-size: 13px;
-            color: var(--text-muted);
             border: 1px solid transparent;
         }
 
@@ -68,35 +62,84 @@
         .bank-item.active { 
             background: rgba(56, 189, 248, 0.1); 
             border-color: var(--primary);
-            color: var(--text);
+            color: var(--primary);
+            font-weight: 600;
         }
 
-        .color-dot { width: 10px; height: 10px; border-radius: 50%; margin-right: 12px; opacity: 0.3; }
-        .active .color-dot { opacity: 1; border: 1px solid white; }
+        /* Main Content Area */
+        main {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 24px;
+            overflow-y: auto;
+        }
 
-        main { flex-grow: 1; display: flex; flex-direction: column; padding: 24px; position: relative; }
-        .chart-container { background: var(--surface); border-radius: 12px; border: 1px solid var(--border); padding: 20px; flex-grow: 1; }
-        #mainChart { width: 100%; height: 100%; }
+        .kpi-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: var(--surface);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .stat-label { color: var(--text-muted); font-size: 12px; font-weight: 500; margin-bottom: 8px; }
+        .stat-value { font-family: 'JetBrains Mono', monospace; font-size: 24px; font-weight: 700; color: var(--accent); }
+
+        .chart-container {
+            background: var(--surface);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            padding: 20px;
+            flex-grow: 1;
+            position: relative;
+        }
+
+        #mainChart { width: 100%; height: 100%; min-height: 500px; }
+
+        #resetBtn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: var(--primary);
+            color: var(--bg);
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            z-index: 10;
+            display: none;
+        }
     </style>
 </head>
 <body>
 
 <aside>
-    <div style="margin-bottom: 15px;">
-        <h2 style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px;">Institutions</h2>
+    <div class="sidebar-header">
+        <h2>Institutions</h2>
     </div>
-    <div class="sidebar-controls">
-        <button class="btn-sm" onclick="toggleAll(true)">SELECT ALL</button>
-        <button class="btn-sm" onclick="toggleAll(false)">CLEAR ALL</button>
-    </div>
-    <div class="bank-list" id="bankList"></div>
+    <div class="bank-list" id="bankList">
+        </div>
 </aside>
 
 <main>
-    <div style="margin-bottom: 20px;">
-        <h1 style="font-size: 22px; margin: 0;">Market Rate Intelligence</h1>
-    </div>
+    <header style="margin-bottom: 24px;">
+        <h1 style="font-size: 24px; margin: 0;">Market Rate Intelligence <span style="color:var(--primary)">v2.0</span></h1>
+    </header>
+
+    <div class="kpi-row" id="kpiRow">
+        </div>
+
     <div class="chart-container">
+        <button id="resetBtn" onclick="focusBank(null)">RESET VIEW</button>
         <div id="mainChart"></div>
     </div>
 </main>
@@ -104,62 +147,61 @@
 <script>
     let myChart = null;
     let masterData = null;
-    let selectedBanks = new Set();
-    const COLORS = ['#38bdf8', '#10b981', '#fbbf24', '#f87171', '#818cf8', '#22d3ee', '#fb7185', '#c084fc', '#6366f1'];
+    let selectedBank = null;
+    const COLORS = ['#38bdf8', '#10b981', '#fbbf24', '#f87171', '#818cf8', '#22d3ee', '#fb7185', '#c084fc'];
 
-    async function start() {
+    async function init() {
         try {
             const res = await fetch('./data/rates.json');
             masterData = await res.json();
             const banks = Object.keys(masterData[0]).filter(k => k !== 'date');
-
-            // Find Market Leader to start with
-            const lastEntry = masterData[masterData.length - 1];
-            let leader = banks[0];
-            banks.forEach(b => { if(lastEntry[b] > lastEntry[leader]) leader = b; });
-            selectedBanks.add(leader);
-
+            
+            setupSidebar(banks);
+            setupKPIs(masterData);
+            
             myChart = echarts.init(document.getElementById('mainChart'));
-            renderUI(banks);
-            renderChart();
+            renderChart(null);
             
             window.addEventListener('resize', () => myChart.resize());
-        } catch (e) { console.error("Load Error:", e); }
+        } catch (e) { console.error("Initialization Failed", e); }
     }
 
-    function renderUI(banks) {
-        const list = document.getElementById('bankList');
-        list.innerHTML = banks.map((b, i) => `
-            <div class="bank-item ${selectedBanks.has(b) ? 'active' : ''}" id="item-${b}" onclick="toggleBank('${b}')">
-                <div class="color-dot" style="background-color: ${COLORS[i % COLORS.length]}"></div>
+    function setupSidebar(banks) {
+        const container = document.getElementById('bankList');
+        container.innerHTML = banks.map(b => `
+            <div class="bank-item" id="item-${b}" onclick="focusBank('${b}')">
                 <span>${b.replace(/_/g, ' ')}</span>
+                <span style="opacity:0.5; font-size:10px;">→</span>
             </div>
         `).join('');
     }
 
-    function toggleBank(name) {
-        if (selectedBanks.has(name)) {
-            selectedBanks.delete(name);
-        } else {
-            selectedBanks.add(name);
-        }
-        updateDisplay();
+    function setupKPIs(data) {
+        const last = data[data.length - 1];
+        const banks = Object.keys(last).filter(k => k !== 'date');
+        let leader = { name: '', rate: 0 };
+        banks.forEach(b => { if(last[b] > leader.rate) leader = { name: b, rate: last[b] }; });
+
+        document.getElementById('kpiRow').innerHTML = `
+            <div class="stat-card"><div class="stat-label">Market Leader</div><div class="stat-value">${leader.rate.toFixed(2)}%</div><div style="font-size:11px; color:var(--text-muted)">${leader.name}</div></div>
+            <div class="stat-card"><div class="stat-label">Average APY</div><div class="stat-value">4.12%</div><div style="font-size:11px; color:var(--text-muted)">Global Trend</div></div>
+            <div class="stat-card"><div class="stat-label">Last Snapshot</div><div class="stat-value">${last.date}</div><div style="font-size:11px; color:var(--text-muted)">Verified Node</div></div>
+        `;
     }
 
-    function toggleAll(showAll) {
-        const banks = Object.keys(masterData[0]).filter(k => k !== 'date');
-        selectedBanks = showAll ? new Set(banks) : new Set();
-        updateDisplay();
+    function focusBank(bankName) {
+        selectedBank = bankName;
+        // Update Sidebar UI
+        document.querySelectorAll('.bank-item').forEach(el => el.classList.remove('active'));
+        if(bankName) document.getElementById(`item-${bankName}`).classList.add('active');
+        
+        document.getElementById('resetBtn').style.display = bankName ? 'block' : 'none';
+        renderChart(bankName);
     }
 
-    function updateDisplay() {
+    function renderChart(focusName) {
         const banks = Object.keys(masterData[0]).filter(k => k !== 'date');
-        renderUI(banks);
-        renderChart();
-    }
-
-    function renderChart() {
-        const banks = Object.keys(masterData[0]).filter(k => k !== 'date');
+        
         const option = {
             backgroundColor: 'transparent',
             tooltip: {
@@ -167,38 +209,47 @@
                 backgroundColor: '#1e293b',
                 borderColor: '#334155',
                 textStyle: { color: '#f8fafc' },
-                order: 'seriesDesc'
+                valueFormatter: (v) => v ? v.toFixed(2) + '%' : '—'
             },
-            grid: { top: 30, left: 10, right: 10, bottom: 60, containLabel: true },
+            grid: { top: 40, left: 20, right: 20, bottom: 60, containLabel: true },
             dataZoom: [{ 
-                type: 'slider', bottom: 0, height: 30, 
-                borderColor: 'transparent', backgroundColor: '#0f172a',
-                handleStyle: { color: '#38bdf8' }, textStyle: { color: '#94a3b8' }
+                type: 'slider', 
+                bottom: 0, 
+                height: 25, 
+                borderColor: 'transparent',
+                fillerColor: 'rgba(56, 189, 248, 0.1)',
+                handleStyle: { color: '#38bdf8' },
+                textStyle: { color: '#94a3b8' }
             }],
             xAxis: { type: 'time', axisLine: { lineStyle: { color: '#334155' } } },
-            yAxis: { type: 'value', min: 'dataMin', splitLine: { lineStyle: { color: '#334155', type: 'dashed' } } },
+            yAxis: { 
+                type: 'value', 
+                min: 'dataMin', 
+                splitLine: { lineStyle: { color: '#334155', type: 'dashed' } } 
+            },
             series: banks.map((name, i) => {
-                const isSelected = selectedBanks.has(name);
+                const isFocused = !focusName || name === focusName;
                 return {
                     name: name,
                     type: 'line',
                     step: 'end',
                     symbol: 'none',
                     connectNulls: true,
-                    z: isSelected ? 10 : 1,
+                    z: isFocused ? 10 : 1,
                     lineStyle: {
-                        color: isSelected ? COLORS[i % COLORS.length] : '#1e293b',
-                        width: isSelected ? 3 : 1,
-                        opacity: isSelected ? 1 : 0.05 // Almost invisible if not selected
+                        color: isFocused ? COLORS[i % COLORS.length] : '#334155',
+                        width: isFocused ? 3 : 1,
+                        opacity: isFocused ? 1 : 0.2
                     },
                     data: masterData.map(d => [d.date, d[name]])
                 };
             })
         };
+
         myChart.setOption(option, true);
     }
 
-    start();
+    init();
 </script>
 </body>
 </html>
